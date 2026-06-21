@@ -29,13 +29,4 @@ onMounted(() => {
     }, 2000);
 });
 </script>
-
-<style scoped>
-.flex-center {
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  align-items: center;
-  height: 100%;
-}
-</style>
+

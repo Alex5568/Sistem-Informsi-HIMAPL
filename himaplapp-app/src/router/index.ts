@@ -8,12 +8,40 @@ const routes: Array<RouteRecordRaw> = [
     path: '',
     redirect: '/login'
   },
-  
+
   // 2. Rute Standar (Standalone Pages)
   {
     path: '/folder/:id',
     name: 'Folder',
     component: () => import('../views/FolderPage.vue')
+  },
+
+  // 3. Rute Tabs (Nested Routes)
+  {
+    path: '/tabs/',
+    component: TabsPage,
+    children: [
+      {
+        path: '',
+        redirect: '/tabs/home'
+      },
+      {
+        path: 'home',
+        component: () => import('@/views/Tab1Page.vue')
+      },
+      {
+        path: 'tab2',
+        component: () => import('@/views/Tab2Page.vue')
+      },
+      {
+        path: 'tab3',
+        component: () => import('@/views/Tab3Page.vue')
+      },
+      {
+        path: 'tab4',
+        component: () => import('@/views/Tab4Page.vue')
+      }
+    ]
   },
   {
     path: '/loader',
@@ -34,30 +62,6 @@ const routes: Array<RouteRecordRaw> = [
     path: '/project',
     name: 'Project',
     component: () => import('../views/ProjectPage.vue')
-  },
-
-  // 3. Rute Tabs (Nested Routes)
-  {
-    path: '/tabs/',
-    component: TabsPage,
-    children: [
-      {
-        path: '',
-        redirect: '/tabs/tab1'
-      },
-      {
-        path: 'tab1',
-        component: () => import('@/views/Tab1Page.vue')
-      },
-      {
-        path: 'tab2',
-        component: () => import('@/views/Tab2Page.vue')
-      },
-      {
-        path: 'tab3',
-        component: () => import('@/views/Tab3Page.vue')
-      }
-    ]
   }
 ];
 
