@@ -90,62 +90,16 @@
         </div>
       </div>
     </ion-content>
-
-    <ion-footer class="ion-no-border">
-      <ion-tab-bar slot="bottom" class="custom-tab-bar">
-        <ion-tab-button tab="home" class="active-tab">
-          <ion-icon :icon="home"></ion-icon>
-        </ion-tab-button>
-        <ion-tab-button tab="analytics">
-          <ion-icon :icon="barChartOutline"></ion-icon>
-        </ion-tab-button>
-        <ion-tab-button tab="notifications">
-          <ion-icon :icon="notificationsOutline"></ion-icon>
-        </ion-tab-button>
-        <ion-tab-button tab="profile">
-          <ion-icon :icon="personOutline"></ion-icon>
-        </ion-tab-button>
-      </ion-tab-bar>
-    </ion-footer>
   </ion-page>
 </template>
 
-<script lang="ts">
-import { defineComponent } from "vue";
+<script setup lang="ts">
 import {
   IonPage, IonHeader, IonToolbar, IonTitle, IonButtons, IonButton,
   IonIcon, IonAvatar, IonContent, IonCard, IonBadge, IonThumbnail,
-  IonFooter, IonTabBar, IonTabButton
+  IonMenuButton
 } from "@ionic/vue";
-import {
-//   menuHamburgerOutline, 
-  calendarOutline, home, barChartOutline,
-  notificationsOutline, personOutline
-} from "ionicons/icons";
-
-// Hanya mengimpor gambar asli
-// import image from "./image.png";
-// import image1 from "./image-1.png";
-// import image2 from "./image-2.png";
-
-export default defineComponent({
-  name: "IphoneHome",
-  components: {
-    IonPage, IonHeader, IonToolbar, IonTitle, IonButtons, IonButton,
-    IonIcon, IonAvatar, IonContent, IonCard, IonBadge, IonThumbnail,
-    IonFooter, IonTabBar, IonTabButton
-  },
-  setup() {
-    return {
-      // Icons yang digunakan
-    //   menuHamburgerOutline, 
-      calendarOutline, home, barChartOutline,
-      notificationsOutline, personOutline,
-      // Images yang digunakan
-    //   image, image1, image2
-    };
-  },
-});
+import { calendarOutline } from "ionicons/icons";
 </script>
 
 <style scoped>
@@ -156,8 +110,8 @@ ion-content.app-background {
 
 /* Header */
 .custom-header {
-  background: rgba(255, 255, 255, 0.8);
-  backdrop-filter: blur(12px);
+  background: #e9edf4;
+  /* backdrop-filter: blur(12px); */
 }
 .header-title {
   color: #184a85;
@@ -339,20 +293,5 @@ ion-content.app-background {
   line-clamp: 2;
   -webkit-box-orient: vertical;
   overflow: hidden;
-}
-
-/* Tab Bar Override */
-.custom-tab-bar {
-  --background: #ffffff;
-  --border: none;
-  box-shadow: 0px -4px 20px rgba(0, 0, 0, 0.05);
-  height: 80px;
-  padding-bottom: env(safe-area-inset-bottom);
-}
-.active-tab {
-  --color-selected: #184a85;
-  background: #eef4ff;
-  border-radius: 12px;
-  margin: 8px;
 }
 </style>

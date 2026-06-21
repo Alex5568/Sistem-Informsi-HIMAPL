@@ -97,7 +97,7 @@ const goToRegister = () => {
 
 <style scoped>
 .login-content {
-  --background: #f7f9fbcc;
+  --background: #e9edf4;
 }
 
 .login-container {

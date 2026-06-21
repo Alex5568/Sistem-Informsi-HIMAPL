@@ -25,9 +25,13 @@
           </ion-list>
         </ion-content>
       </ion-menu>
+
+      
       <ion-router-outlet id="main-content"></ion-router-outlet>
-    </ion-split-pane>
+    </ion-split-pane> 
+
   </ion-app>
+
 </template>
 
 <script setup lang="ts">
@@ -49,6 +53,9 @@ import { ref } from 'vue';
 import {
   archiveOutline,
   archiveSharp,
+  home,
+  barChart,
+  square,
   bookmarkOutline,
   bookmarkSharp,
   heartOutline,

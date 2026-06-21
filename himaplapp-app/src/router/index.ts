@@ -1,37 +1,69 @@
 import { createRouter, createWebHistory } from '@ionic/vue-router';
 import { RouteRecordRaw } from 'vue-router';
+import TabsPage from '../views/TabsPage.vue';
 
 const routes: Array<RouteRecordRaw> = [
+  // 1. Base Route (Mengarahkan ke Login saat aplikasi pertama kali dibuka)
   {
     path: '',
-    // redirect: '/folder/Inbox'
     redirect: '/login'
   },
+  
+  // 2. Rute Standar (Standalone Pages)
   {
     path: '/folder/:id',
     name: 'Folder',
-    component: () => import ('../views/FolderPage.vue')
+    component: () => import('../views/FolderPage.vue')
   },
   {
     path: '/loader',
     name: 'Loader',
-    component: () => import ('../views/LoaderPages.vue')
+    component: () => import('../views/LoaderPages.vue')
   },
   {
     path: '/login',
     name: 'Login',
-    component: () => import ('../views/LoginPage.vue')
+    component: () => import('../views/LoginPage.vue')
   },
   {
     path: '/home',
     name: 'Home',
-    component: () => import('../views/HomePage2.vue')
+    component: () => import('../views/HomePage.vue')
+  },
+  {
+    path: '/project',
+    name: 'Project',
+    component: () => import('../views/ProjectPage.vue')
+  },
+
+  // 3. Rute Tabs (Nested Routes)
+  {
+    path: '/tabs/',
+    component: TabsPage,
+    children: [
+      {
+        path: '',
+        redirect: '/tabs/tab1'
+      },
+      {
+        path: 'tab1',
+        component: () => import('@/views/Tab1Page.vue')
+      },
+      {
+        path: 'tab2',
+        component: () => import('@/views/Tab2Page.vue')
+      },
+      {
+        path: 'tab3',
+        component: () => import('@/views/Tab3Page.vue')
+      }
+    ]
   }
-]
+];
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
   routes
-})
+});
 
-export default router
+export default router;

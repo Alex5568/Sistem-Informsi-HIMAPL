@@ -1,5 +1,6 @@
 <template>
   <ion-page>
+    <!-- Folder Page -->
     <ion-header :translucent="true">
       <ion-toolbar>
         <ion-buttons slot="start">
@@ -26,6 +27,8 @@
 
 <script setup lang="ts">
 import { IonButtons, IonContent, IonHeader, IonMenuButton, IonPage, IonTitle, IonToolbar } from '@ionic/vue';
+import { IonTabBar, IonTabButton, IonTabs, IonLabel, IonIcon, IonRouterOutlet } from '@ionic/vue';
+import { ellipse, square, triangle } from 'ionicons/icons';
 </script>
 
 <style scoped>
