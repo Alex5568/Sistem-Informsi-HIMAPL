@@ -126,11 +126,15 @@ ion-content.app-background {
 .badge-blue {
   --background: #a5c8fe;
   --color: #2f5482;
+  font-size: 9px;
+  padding: 4px 8px;
 }
 
 .badge-orange {
   --background: #ffddb3;
   --color: #624000;
+  font-size: 9px;
+  padding: 4px 8px;
 }
 
 /* =========================================
@@ -518,4 +522,4 @@ ion-content.app-background {
 
 #container a {
   text-decoration: none;
-}
+}
