@@ -30,15 +30,15 @@ const routes: Array<RouteRecordRaw> = [
         component: () => import('@/views/Tab1Page.vue')
       },
       {
-        path: 'tab2',
+        path: 'projects',
         component: () => import('@/views/Tab2Page.vue')
       },
       {
-        path: 'tab3',
+        path: 'notifications',
         component: () => import('@/views/Tab3Page.vue')
       },
       {
-        path: 'tab4',
+        path: 'profile',
         component: () => import('@/views/Tab4Page.vue')
       }
     ]
@@ -54,14 +54,9 @@ const routes: Array<RouteRecordRaw> = [
     component: () => import('../views/LoginPage.vue')
   },
   {
-    path: '/home',
-    name: 'Home',
-    component: () => import('../views/HomePage.vue')
-  },
-  {
-    path: '/project',
-    name: 'Project',
-    component: () => import('../views/ProjectPage.vue')
+    path: '/register',
+    name: 'Register',
+    component: () => import('../views/RegisterPage.vue')
   }
 ];
 

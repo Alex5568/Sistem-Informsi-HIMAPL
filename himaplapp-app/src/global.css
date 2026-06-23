@@ -2,7 +2,7 @@
    GLOBAL BACKGROUND & LAYOUT
    ========================================= */
 ion-content.app-background {
-  --background: #f7f9fb;
+  --background: #ebeff5;
 }
 
 /* =========================================
@@ -14,7 +14,9 @@ ion-content.app-background {
 }
 
 .custom-header-solid {
-  background: #e9edf4; /* Versi solid (tanpa blur) seperti di Tab1 */
+  /* Versi solid (tanpa blur) seperti di Tab1 */
+  background: #e9edf4;
+  /* background: #ffffff; */
 }
 
 .header-title {

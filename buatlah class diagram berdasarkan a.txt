@@ -1,0 +1,45 @@
+buatlah class diagram berdasarkan analisis fungsional berikut:
+
+-semua pengguna dapat melakukan login
+
+-semua pengguna dapat melakukan register
+
+-semua pengguna dapat mengelolah profil
+
+-semua pengguna dapat menentukan role sebagai anggota, ketua, atau dosen
+
+-semua pengguna dapat melihat detail event
+
+-semua pengguna dapat melakukan registrasi ke event
+
+-semua pengguna dapat melihat notifikasi
+
+-semua pengguna dapat melihat struktur organisasi
+
+-semua pengguna dapat melihat status event (Tersedia, Berlangsung, Riwayat)
+
+-semua pengguna dapat melakukan logout
+
+-ketua dapat mengelolah event
+
+-ketua dapat membuat divisi
+
+-ketua dapat dapat mengangkat anggota menjadi ketua divisi
+
+-ketua dapat menentukan tugas pada event kepada semua anggota
+
+-anggota dapat memilih divisi
+
+-ketua divisi dapat menentukan tugas pada event kepada anggota divisi
+
+-semua pengguna dapat melihat tugas yang diterima
+
+-semua pengguna dapat mengunggah foto untuk dokumentasi event
+
+-ketua dapat mengelolah foto dokumentasi event
+
+-ketua divisi dapat mengelolah foto dokumentasi event
+
+-semua pengguna dapat melihat foto dokumentasi event
+
+

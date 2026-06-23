@@ -15,6 +15,7 @@
               ></ion-icon>
               <input
                 type="email"
+                v-model="email"
                 placeholder="username@example.com"
                 class="custom-input"
               />
@@ -34,6 +35,7 @@
               ></ion-icon>
               <input
                 :type="showPassword ? 'text' : 'password'"
+                v-model="password"
                 placeholder="••••••••"
                 class="custom-input"
               />
@@ -46,8 +48,8 @@
           </div>
 
           <!-- LOGIN BUTTON -->
-          <button class="primary-btn" @click="handleLogin">
-            Login <ion-icon :icon="arrowForward" class="btn-icon"></ion-icon>
+          <button class="primary-btn" @click="handleLogin" :disabled="isLoading">
+            {{ isLoading ? 'Memproses...' : 'Login' }} <ion-icon v-if="!isLoading" :icon="arrowForward" class="btn-icon"></ion-icon>
           </button>
 
           <!-- DIVIDER -->
@@ -67,7 +69,7 @@
 
 <script setup lang="ts">
 import { ref } from "vue";
-import { IonPage, IonContent, IonIcon } from "@ionic/vue";
+import { IonPage, IonContent, IonIcon, toastController } from "@ionic/vue";
 import {
   atOutline,
   lockClosedOutline,
@@ -76,21 +78,51 @@ import {
   arrowForward,
 } from "ionicons/icons";
 import { useRouter } from "vue-router";
+import { supabase } from "../supabase";
 
 const router = useRouter();
 const showPassword = ref(false);
+const email = ref("");
+const password = ref("");
+const isLoading = ref(false);
 
 const togglePassword = () => {
   showPassword.value = !showPassword.value;
 };
 
-const handleLogin = () => {
-  console.log("Proses login berjalan ...");
+const handleLogin = async () => {
+  if (!email.value || !password.value) {
+    const toast = await toastController.create({
+      message: 'Email dan password tidak boleh kosong.',
+      duration: 2000,
+      color: 'warning'
+    });
+    return toast.present();
+  }
+
+  isLoading.value = true;
+  
+  const { data, error } = await supabase.auth.signInWithPassword({
+    email: email.value,
+    password: password.value,
+  });
+
+  isLoading.value = false;
+
+  if (error) {
+    const toast = await toastController.create({
+      message: error.message,
+      duration: 3000,
+      color: 'danger'
+    });
+    return toast.present();
+  }
+
+  console.log("Login sukses:", data);
   router.push("/tabs/home");
 };
 
 const goToRegister = () => {
-  console.log("Navigasi ke halaman register ...");
   router.push("/register");
 };
 </script>

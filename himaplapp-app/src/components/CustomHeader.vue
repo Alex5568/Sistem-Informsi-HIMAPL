@@ -1,6 +1,6 @@
 <template>
-  <ion-header class="ion-no-border custom-header">
-    <ion-toolbar color="transparent">
+  <ion-header class="ion-no-border custom-header-solid">
+    <ion-toolbar>
       <ion-buttons slot="start">
         <ion-button class="menu-btn">
           <ion-menu-button></ion-menu-button>

@@ -8,19 +8,19 @@
           <ion-label>Home</ion-label>
         </ion-tab-button>
 
-        <ion-tab-button tab="tab2" href="/tabs/tab2">
+        <ion-tab-button tab="tab2" href="/tabs/projects">
           <ion-icon aria-hidden="true" :icon="barChart" />
-          <ion-label>Tab 2</ion-label>
+          <ion-label>Projects</ion-label>
         </ion-tab-button>
 
-        <ion-tab-button tab="tab3" href="/tabs/tab3">
+        <ion-tab-button tab="tab3" href="/tabs/notifications">
           <ion-icon aria-hidden="true" :icon="notifications" />
-          <ion-label>Tab 3</ion-label>
+          <ion-label>Notifications</ion-label>
         </ion-tab-button>
 
-        <ion-tab-button tab="tab4" href="/tabs/tab4">
+        <ion-tab-button tab="tab4" href="/tabs/profile">
           <ion-icon aria-hidden="true" :icon="person" />
-          <ion-label>Tab 4</ion-label>
+          <ion-label>Profile</ion-label>
         </ion-tab-button>
       </ion-tab-bar>
     </ion-tabs>

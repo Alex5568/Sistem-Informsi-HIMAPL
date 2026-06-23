@@ -2,7 +2,7 @@
   <ion-page>
     <CustomHeader title="HIMAPL" />
 
-    <ion-content :fullscreen="true">
+    <ion-content :fullscreen="true" class="app-background">
       <div class="ion-padding">
 
         <ion-segment v-model="selectedTab" class="custom-segment" mode="ios">
