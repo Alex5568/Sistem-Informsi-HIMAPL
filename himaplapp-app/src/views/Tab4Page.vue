@@ -10,7 +10,7 @@
         <h2 class="profile-name" v-if="!isLoading">{{ userData?.nama || 'Guest' }}</h2>
         <h2 class="profile-name" v-else>Loading...</h2>
         <p class="profile-role" v-if="!isLoading">{{ userData?.nim || userData?.email }}</p>
-        <ion-badge class="profile-badge" v-if="!isLoading">{{ userData?.user_role || 'No Role' }}</ion-badge>
+        <ion-badge class="profile-badge" v-if="!isLoading">{{ userData?.role || 'No Role' }}</ion-badge>
       </div>
 
       <div class="profile-content-section">
@@ -54,9 +54,9 @@
           </ion-list>
         </div>
 
-        <ion-button expand="block" class="logout-btn" fill="clear">
+        <ion-button expand="block" class="logout-btn" fill="clear" @click="handleLogout" :disabled="isLoading">
           <ion-icon :icon="logOutOutline" slot="start"></ion-icon>
-          Log Out
+          {{ isLoading ? 'Logging out...' : 'Log Out' }}
         </ion-button>
       </div>
     </ion-content>
@@ -75,9 +75,11 @@ import {
 } from 'ionicons/icons';
 import CustomHeader from "@/components/CustomHeader.vue";
 import { supabase } from "../supabase";
+import { useRouter } from 'vue-router';
 
 const userData = ref<any>(null);
 const isLoading = ref(true);
+const router = useRouter();
 
 const fetchUserProfile = async () => {
     isLoading.value = true;
@@ -97,6 +99,7 @@ const fetchUserProfile = async () => {
         if (publicError) {
             console.error("Public User Fetch Error:", publicError);
         } else {
+            console.log("Data dari Supabase:", publicUser);
             userData.value = publicUser;
         }
     } catch (e) {
@@ -104,6 +107,26 @@ const fetchUserProfile = async () => {
     } finally {
         isLoading.value = false;
     }
+};
+
+const handleLogout = async () => {
+  try {
+    isLoading.value = true;
+    const { error } = await supabase.auth.signOut();
+    
+    if (error) throw error;
+    
+    // Opsional: Tambahkan toast notifikasi sukses jika diperlukan
+    console.log("Berhasil log out");
+    
+    // Arahkan pengguna kembali ke halaman login
+    // Pastikan Anda sudah mengimpor useRouter dari 'vue-router'
+    router.push('/login'); 
+  } catch (error: any) {
+    console.error("Logout Error:", error.message);
+  } finally {
+    isLoading.value = false;
+  }
 };
 
 onMounted(() => {

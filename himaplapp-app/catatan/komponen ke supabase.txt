@@ -1,0 +1,20 @@
+Tolong bantu saya mengubah komponen UI statis Ionic Vue berikut menjadi dinamis menggunakan Supabase. 
+
+Sebagai konteks, saya menggunakan Ionic Vue dengan `<script setup lang="ts">`. Saya ingin mengambil dua jenis data dari Supabase ketika komponen ini dimuat (menggunakan `onMounted`):
+
+1. **Urgent Card (Event/Seminar):**
+   Ambil 1 data event terdekat atau yang memiliki status UPCOMING.
+   - Nama tabel di Supabase: events
+   - Kolom yang ingin diambil: nama-event, deskripsi, status, start_date, end-date, location, created_at
+2. **News Section (Kabar Terbaru):**
+   Ambil daftar berita/kabar terbaru, urutkan dari yang paling baru.
+   - Nama tabel di Supabase: news
+   - Kolom yang ingin diambil: title, content, image_url, created_at
+
+**Tugas Anda:**
+1. Jika ada file `src/database.types.ts` di dalam proyek ini, tolong baca file tersebut sebagai referensi tipe data.
+2. Buatkan state reaktif menggunakan `ref` (misalnya `upcomingEvent`, `newsList`, dan `isLoading`).
+3. Buatkan fungsi asinkron (misalnya `fetchDashboardData`) yang melakukan query `select` ke Supabase untuk kedua tabel tersebut, lengkap dengan penanganan error (`try/catch`).
+4. Panggil fungsi tersebut di dalam `onMounted`.
+5. Modifikasi bagian `<template>` yang saya berikan di bawah ini. Gunakan `v-if` untuk menangani state loading, interpolasi Vue (`{{ }}`) untuk menampilkan data teks, dan `v-for` untuk melakukan perulangan pada kartu berita (news-card) berdasarkan data `newsList`.
+6. Jangan lupa mengimpor instansiasi `supabase` dari file konfigurasi proyek saya.
