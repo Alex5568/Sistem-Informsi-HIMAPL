@@ -38,6 +38,22 @@
           </div>
 
           <div class="input-group">
+            <label class="input-label">NIM (NOMOR INDUK MAHASISWA)</label>
+            <div class="input-wrapper">
+              <ion-icon
+                :icon="personOutline"
+                class="input-icon left-icon"
+              ></ion-icon>
+              <input
+                type="text"
+                placeholder="1234567890"
+                class="custom-input"
+                v-model="nim"
+              />
+            </div>
+          </div>
+
+          <div class="input-group">
             <label class="input-label">PASSWORD</label>
             <div class="input-wrapper">
               <ion-icon
@@ -95,6 +111,7 @@ const router = useRouter();
 // State Form
 const fullName = ref("");
 const email = ref("");
+const nim = ref("");
 const password = ref("");
 const showPassword = ref(false);
 const isLoading = ref(false);
@@ -115,8 +132,7 @@ const showToast = async (message: string, color: 'success' | 'danger') => {
 };
 
 const handleRegister = async () => {
-  // 1. Validasi Input Dasar
-  if (!fullName.value || !email.value || !password.value) {
+  if (!fullName.value || !email.value || !nim.value || !password.value) {
     showToast("Mohon lengkapi semua data.", "danger");
     return;
   }
@@ -124,29 +140,27 @@ const handleRegister = async () => {
   try {
     isLoading.value = true;
     
-    // 2. Proses Registrasi ke Supabase
+    // Registrasi Akun ke Supabase Auth
     const { data, error } = await supabase.auth.signUp({
       email: email.value,
       password: password.value,
       options: {
         data: {
-          full_name: fullName.value, // Menyimpan Full Name di user metadata Supabase
+          full_name: fullName.value,
+          nim: nim.value // Mengirim NIM ke metadata
         }
       }
     });
 
-    // 3. Tangani jika ada error dari Supabase
     if (error) throw error;
 
-    // 4. Jika sukses
-    showToast("Registrasi berhasil! Silakan cek email untuk verifikasi.", "success");
-    
-    // Opsional: Bersihkan form
-    fullName.value = "";
-    email.value = "";
-    password.value = "";
+    // Deteksi email duplikat
+    if (data.user && data.user.identities && data.user.identities.length === 0) {
+      showToast("Email ini sudah digunakan. Silakan gunakan email lain atau Login.", "danger");
+      return; // Hentikan eksekusi lebih lanjut
+    }
 
-    // Arahkan ke halaman login
+    showToast("Registrasi berhasil! Silakan cek email untuk verifikasi.", "success");
     router.push("/login");
 
   } catch (error: any) {

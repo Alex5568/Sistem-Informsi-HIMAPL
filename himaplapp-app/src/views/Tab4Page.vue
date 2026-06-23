@@ -5,11 +5,12 @@
     <ion-content :fullscreen="true" class="app-background">
       <div class="profile-header-section">
         <ion-avatar class="profile-avatar">
-          <img src="https://ionicframework.com/docs/img/demos/avatar.svg" alt="Profile Avatar" />
+          <img :src="userData?.avatar_url || 'https://ionicframework.com/docs/img/demos/avatar.svg'" alt="Profile Avatar" />
         </ion-avatar>
-        <h2 class="profile-name">John Doe</h2>
-        <p class="profile-role">Mahasiswa TPL</p>
-        <ion-badge class="profile-badge">Anggota HIMAPL</ion-badge>
+        <h2 class="profile-name" v-if="!isLoading">{{ userData?.nama || 'Guest' }}</h2>
+        <h2 class="profile-name" v-else>Loading...</h2>
+        <p class="profile-role" v-if="!isLoading">{{ userData?.nim || userData?.email }}</p>
+        <ion-badge class="profile-badge" v-if="!isLoading">{{ userData?.user_role || 'No Role' }}</ion-badge>
       </div>
 
       <div class="profile-content-section">
@@ -63,6 +64,7 @@
 </template>
 
 <script setup lang="ts">
+import { ref, onMounted } from 'vue';
 import {
   IonPage, IonContent, IonAvatar, IonList, IonItem,
   IonIcon, IonLabel, IonBadge, IonButton
@@ -72,6 +74,41 @@ import {
   helpCircleOutline, logOutOutline, chevronForwardOutline
 } from 'ionicons/icons';
 import CustomHeader from "@/components/CustomHeader.vue";
+import { supabase } from "../supabase";
+
+const userData = ref<any>(null);
+const isLoading = ref(true);
+
+const fetchUserProfile = async () => {
+    isLoading.value = true;
+    try {
+        const { data: authData, error: authError } = await supabase.auth.getUser();
+        if (authError || !authData.user) {
+            console.error("Auth Error:", authError);
+            return;
+        }
+        
+        const { data: publicUser, error: publicError } = await supabase
+            .from('users')
+            .select('*')
+            .eq('id', authData.user.id)
+            .single();
+            
+        if (publicError) {
+            console.error("Public User Fetch Error:", publicError);
+        } else {
+            userData.value = publicUser;
+        }
+    } catch (e) {
+        console.error("Unexpected Error:", e);
+    } finally {
+        isLoading.value = false;
+    }
+};
+
+onMounted(() => {
+    fetchUserProfile();
+});
 </script>
 
 <style scoped>
