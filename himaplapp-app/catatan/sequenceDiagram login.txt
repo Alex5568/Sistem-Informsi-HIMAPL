@@ -1,0 +1,34 @@
+sequenceDiagram
+    actor User
+    participant UI as Login Page (Vue)
+    participant Router as Vue Router
+    participant Supabase as Supabase Auth
+
+    User->>UI: Memasukkan Email & Password
+    User->>UI: Klik tombol "Login"
+    
+    activate UI
+    UI->>UI: Cek validasi lokal (email & password kosong?)
+    
+    alt Input Tidak Lengkap
+        UI-->>User: Tampilkan Toast Warning ("Email dan password tidak boleh kosong")
+    else Input Lengkap
+        UI->>UI: Tampilkan state loading ("Memproses...")
+        UI->>Supabase: signInWithPassword({ email, password })
+        activate Supabase
+        
+        Supabase-->>UI: Response (Data / Error)
+        deactivate Supabase
+        
+        UI->>UI: Hentikan state loading
+        
+        alt Login Gagal (Ada Error)
+            UI-->>User: Tampilkan Toast Danger (Pesan Error dari Supabase)
+        else Login Berhasil
+            UI->>Router: router.push("/tabs/home")
+            activate Router
+            Router-->>User: Arahkan / Render Halaman Utama (Home)
+            deactivate Router
+        end
+    end
+    deactivate UI

@@ -39,7 +39,7 @@
 
         <div class="news-section">
           <div class="news-header">
-            <h3>Kabar Terbaru</h3>
+            <h3>News</h3>
             <ion-button fill="clear" class="see-all-btn">SEE ALL</ion-button>
           </div>
 
@@ -135,7 +135,7 @@ const getBadgeClass = (category: string) => {
     case 'ACHIEVEMENT':
       return 'badge-achievement';
     case 'GENERAL':
-      return 'badge-general';
+      return 'badge-announcement';
     case 'ANNOUNCEMENT':
     default:
       return 'badge-announcement';

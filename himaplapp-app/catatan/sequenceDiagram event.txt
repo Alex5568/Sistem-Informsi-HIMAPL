@@ -1,0 +1,59 @@
+sequenceDiagram
+    autonumber
+    actor K as Ketua
+    participant UI as UI Portal Event (Ionic)
+    participant C as EventController (PHP)
+    participant M as Model Event (Database)
+
+    %% Skenario 1: Menambah Event
+    Note over K, M: Skenario A: Menambah Data Event Baru
+    K->>UI: Input data event baru & klik simpan
+    activate UI
+    UI->>C: storeEventRequest(namaEvent, fotoUrl)
+    activate C
+    C->>C: validasiInput berkas()
+    alt Jika input data korup / tidak valid
+        C-->>UI: Return Response Error (Validation Failed)
+        UI-->>K: Tampilkan pesan kegagalan input
+    else Jika input data valid
+        C->>M: insertIntoEvents(data)
+        activate M
+        M-->>C: Record Event berhasil dibuat
+        deactivate M
+        C-->>UI: Return Response Sukses (HTTP 201)
+        UI-->>K: Tampilkan notifikasi "Event Berhasil Dibuat"
+    end
+    deactivate C
+    deactivate UI
+
+    %% Skenario 2: Mengubah Event
+    Note over K, M: Skenario B: Mengubah Data Event Existing
+    K->>UI: Pilih event & ubah data (nama/status/foto)
+    activate UI
+    UI->>C: updateEventRequest(eventId, dataBaru)
+    activate C
+    C->>M: findOrFail(eventId)
+    activate M
+    M->>C: Instance Event ditemukan
+    C->>M: update(dataBaru)
+    M-->>C: Database Berhasil Diperbarui
+    deactivate M
+    C-->>UI: Return Response Sukses (HTTP 200)
+    UI-->>K: Tampilkan notifikasi "Data Event Diperbarui"
+    deactivate C
+    deactivate UI
+
+    %% Skenario 3: Menghapus Event
+    Note over K, M: Skenario C: Menghapus Data Event
+    K->>UI: Pilih event & klik hapus data
+    activate UI
+    UI->>C: deleteEventRequest(eventId)
+    activate C
+    C->>M: destroy(eventId)
+    activate M
+    M-->>C: Record Event Berhasil Dihapus
+    deactivate M
+    C-->>UI: Return Response Sukses (HTTP 200)
+    UI-->>K: Tampilkan notifikasi "Event Berhasil Dihapus"
+    deactivate C
+    deactivate UI
