@@ -1,1 +1,3 @@
+npx supabase login
+
 npx supabase gen types typescript --project-id weypaqthodjvvadjmihx --schema public > src/database.types.ts

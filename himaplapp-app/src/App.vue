@@ -73,8 +73,8 @@ import {
 const selectedIndex = ref(0);
 const appPages = [
   {
-    title: 'Inbox',
-    url: '/folder/Inbox',
+    title: 'Test CardButton',
+    url: '/folder/Cardbutton',
     iosIcon: mailOutline,
     mdIcon: mailSharp,
   },
