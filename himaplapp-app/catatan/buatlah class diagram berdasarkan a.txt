@@ -42,4 +42,10 @@ buatlah class diagram berdasarkan analisis fungsional berikut:
 
 -semua pengguna dapat melihat foto dokumentasi event
 
+-semua pengguna dapat melihat kabar terbaru
 
+-Ketua dapat mempublikasi kabar terbaru
+
+-Ketua divisi dapat mempublikasi kabar terbaru
+
+-Dosen dapat melakukan semua yang dilakukan pengguna

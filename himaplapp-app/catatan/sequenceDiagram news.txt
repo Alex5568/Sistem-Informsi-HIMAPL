@@ -1,0 +1,59 @@
+sequenceDiagram
+    autonumber
+    actor K as Ketua / Ketua Divisi
+    participant UI as UI Portal News (Ionic)
+    participant C as NewsController (PHP)
+    participant M as Model News (Database)
+
+    %% Skenario 1: Menambah Berita
+    Note over K, M: Skenario A: Mempublikasikan Berita (News) Baru
+    K->>UI: Input judul, isi, & foto berita, lalu klik publikasi
+    activate UI
+    UI->>C: storeNewsRequest(title, content, fotoUrl)
+    activate C
+    C->>C: validasiInputBerkas()
+    alt Jika input data tidak valid atau kosong
+        C-->>UI: Return Response Error (Validation Failed)
+        UI-->>K: Tampilkan pesan kegagalan publikasi
+    else Jika input data valid
+        C->>M: create([title, content, fotoUrl, authorId])
+        activate M
+        M-->>C: Record News berhasil dibuat
+        deactivate M
+        C-->>UI: Return Response Sukses (HTTP 201)
+        UI-->>K: Tampilkan notifikasi "Kabar Terbaru Berhasil Dipublikasikan"
+    end
+    deactivate C
+    deactivate UI
+
+    %% Skenario 2: Mengubah Berita
+    Note over K, M: Skenario B: Mengubah Data Berita (News)
+    K->>UI: Pilih berita & ubah konten data baru
+    activate UI
+    UI->>C: updateNewsRequest(newsId, dataBaru)
+    activate C
+    C->>M: findOrFail(newsId)
+    activate M
+    M->>C: Instance News ditemukan
+    C->>M: update(dataBaru)
+    M-->>C: Database Berhasil Diperbarui
+    deactivate M
+    C-->>UI: Return Response Sukses (HTTP 200)
+    UI-->>K: Tampilkan notifikasi "Berita Berhasil Diperbarui"
+    deactivate C
+    deactivate UI
+
+    %% Skenario 3: Menghapus Berita
+    Note over K, M: Skenario C: Menghapus Berita (News)
+    K->>UI: Pilih berita & klik tombol hapus
+    activate UI
+    UI->>C: deleteNewsRequest(newsId)
+    activate C
+    C->>M: destroy(newsId)
+    activate M
+    M-->>C: Record News Berhasil Dihapus
+    deactivate M
+    C-->>UI: Return Response Sukses (HTTP 200)
+    UI-->>K: Tampilkan notifikasi "Berita Berhasil Dihapus"
+    deactivate C
+    deactivate UI
