@@ -6,7 +6,9 @@ buatlah class diagram berdasarkan analisis fungsional berikut:
 
 -semua pengguna dapat mengelolah profil
 
--semua pengguna dapat menentukan role sebagai anggota, ketua, atau dosen
+-terdapat role berisi anggota, ketua, ketua divis, dan dosen
+
+-Dosen dapat mengubah role pengguna menjadi anggota, ketua, ketua divis, dan dosen
 
 -semua pengguna dapat melihat detail event
 
@@ -49,3 +51,7 @@ buatlah class diagram berdasarkan analisis fungsional berikut:
 -Ketua divisi dapat mempublikasi kabar terbaru
 
 -Dosen dapat melakukan semua yang dilakukan pengguna
+
+-Anggota bisa update status tugasnya
+
+-Pengguna biasa (anggota) hanya bisa menghapus/mengubah foto yang ia unggah sendiri, sedangkan Ketua dan Ketua Divisi bisa menghapus foto milik siapa saja sebagai bentuk moderasi.

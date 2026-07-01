@@ -7,84 +7,47 @@
 
         <ion-segment v-model="selectedTab" class="custom-segment" mode="ios">
           <ion-segment-button value="tersedia">
-            <ion-label>Tersedia</ion-label>
+            <ion-label>Available</ion-label>
           </ion-segment-button>
           <ion-segment-button value="berlangsung">
-            <ion-label>Berlangsung</ion-label>
+            <ion-label>Upcoming</ion-label>
           </ion-segment-button>
           <ion-segment-button value="riwayat">
-            <ion-label>Riwayat</ion-label>
+            <ion-label>Completed</ion-label>
           </ion-segment-button>
         </ion-segment>
 
-        <div class="card-list" v-if="selectedTab === 'tersedia'">
-
-          <ion-card class="news-card">
-            <div class="news-card-content">
-              <ion-thumbnail class="news-thumbnail">
-                <!-- <img :src="image" alt="Thumbnail" /> -->
-              </ion-thumbnail>
-              <div class="news-info">
-                <div class="news-meta">
-                  <div class="badge-group">
-                    <ion-badge class="badge-blue">SEMINAR</ion-badge>
-                    <ion-badge class="badge-blue">SERTIFIKAT</ion-badge>
-                  </div>
-                  <span class="news-time">18/04</span>
-                </div>
-                <h4 class="news-title">Seminar: Advanced UI/UX Design</h4>
-                <p class="news-desc">
-                  Kembangkan skill desain antarmuka modern bersama praktisi industri.
-                </p>
-              </div>
-            </div>
-          </ion-card>
-
-          <ion-card class="news-card">
-            <div class="news-card-content">
-              <ion-thumbnail class="news-thumbnail">
-                <!-- <img :src="image2" alt="Thumbnail" /> -->
-              </ion-thumbnail>
-              <div class="news-info">
-                <div class="news-meta">
-                  <div class="badge-group">
-                    <ion-badge class="badge-blue">KURSUS</ion-badge>
-                    <ion-badge class="badge-blue">SERTIFIKAT</ion-badge>
-                  </div>
-                  <span class="news-time">Yesterday</span>
-                </div>
-                <h4 class="news-title">Kursus UNITY Engine Dari Alumi UVERS</h4>
-                <p class="news-desc">
-                  Kursus UNITY Engine yang dibawakan oleh Yuriko Asinselo
-                </p>
-              </div>
-            </div>
-          </ion-card>
-
+        <div v-if="isLoading" class="empty-state" style="text-align: center; margin-top: 2rem;">
+          <p>Memuat kegiatan...</p>
+        </div>
+        
+        <div v-else-if="filteredEvents.length === 0" class="empty-state" style="text-align: center; margin-top: 2rem; color: #718096;">
+          <p>Belum ada kegiatan untuk kategori ini.</p>
         </div>
 
-        <div v-if="selectedTab === 'berlangsung'" class="empty-state">
-          <p>Belum ada kegiatan yang berlangsung.</p>
-        </div>
-        <!-- <div v-if="selectedTab === 'riwayat'" class="empty-state"> -->
-        <div v-if="selectedTab === 'riwayat'">
-
-          <ion-card class="news-card">
+        <div class="card-list" v-else>
+          <ion-card class="news-card" v-for="event in filteredEvents" :key="event.id">
             <div class="news-card-content">
               <ion-thumbnail class="news-thumbnail">
-                <!-- <img :src="image" alt="Thumbnail" /> -->
+                <img src="https://ionicframework.com/docs/img/demos/thumbnail.svg" alt="Thumbnail" />
               </ion-thumbnail>
               <div class="news-info">
                 <div class="news-meta">
-                  <div class="badge-group">
-                    <ion-badge class="badge-blue">SEMINAR</ion-badge>
-                    <ion-badge class="badge-blue">SERTIFIKAT</ion-badge>
+                  <div class="badge-group" v-if="event.kategori && event.kategori.length > 0">
+                    <ion-badge 
+                      class="badge-blue" 
+                      v-for="(cat, index) in event.kategori.slice(0, 3)" 
+                      :key="index"
+                    >
+                      {{ cat }}
+                    </ion-badge>
+                    <ion-badge class="badge-blue" v-if="event.kategori.length > 3">...</ion-badge>
                   </div>
-                  <span class="news-time">18/04</span>
+                  <span class="news-time" style="margin-left: auto;">{{ formatDate(event.start_date) }}</span>
                 </div>
-                <h4 class="news-title">Seminar: Personal Branding</h4>
+                <h4 class="news-title">{{ event.nama_event }}</h4>
                 <p class="news-desc">
-                  Kembangkan skill personal branding.
+                  {{ event.deskripsi }}
                 </p>
               </div>
             </div>
@@ -102,7 +65,49 @@ import { IonPage, IonContent, IonSegment, IonSegmentButton, IonLabel,
 } from '@ionic/vue';
 import CustomHeader from "@/components/CustomHeader.vue";
 
-import { ref } from "vue";
+import { ref, computed, onMounted } from "vue";
+import { supabase } from "../supabase";
 
 const selectedTab = ref("tersedia");
+const events = ref<any[]>([]);
+const isLoading = ref(true);
+
+const fetchEvents = async () => {
+  isLoading.value = true;
+  try {
+    const { data, error } = await supabase
+      .from('events')
+      .select('*')
+      .order('start_date', { ascending: true });
+    
+    if (error) throw error;
+    events.value = data || [];
+  } catch (error) {
+    console.error("Error fetching events:", error);
+  } finally {
+    isLoading.value = false;
+  }
+};
+
+onMounted(() => {
+  fetchEvents();
+});
+
+const filteredEvents = computed(() => {
+  const statusMap: Record<string, string> = {
+    'tersedia': 'AVAILABLE',
+    'berlangsung': 'UPCOMING',
+    'riwayat': 'COMPLETED'
+  };
+  const targetStatus = statusMap[selectedTab.value];
+  return events.value.filter(e => e.status === targetStatus);
+});
+
+const formatDate = (dateStr: string) => {
+  if (!dateStr) return '';
+  const date = new Date(dateStr);
+  const day = String(date.getDate()).padStart(2, '0');
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  return `${day}/${month}`;
+};
 </script>

@@ -52,6 +52,13 @@
             {{ isLoading ? 'Memproses...' : 'Login' }} <ion-icon v-if="!isLoading" :icon="arrowForward" class="btn-icon"></ion-icon>
           </button>
 
+          <!-- GOOGLE LOGIN BUTTON -->
+          <button class="google-btn" @click="handleGoogleLogin">
+            <!-- <ion-icon :icon="logoGoogle" class="google-icon"></ion-icon> -->
+            <img src="../assets/shapes/google-logo.svg" alt="Google Logo" style="width: 20px; height: 20px; margin-right: 12px;">
+            Sign in with Google
+          </button>
+
           <!-- DIVIDER -->
           <div class="divider">
             <span>NEW HERE?</span>
@@ -76,6 +83,7 @@ import {
   eyeOutline,
   eyeOffOutline,
   arrowForward,
+  logoGoogle,
 } from "ionicons/icons";
 import { useRouter } from "vue-router";
 import { supabase } from "../supabase";
@@ -120,6 +128,24 @@ const handleLogin = async () => {
 
   console.log("Login sukses:", data);
   router.push("/tabs/home");
+};
+
+const handleGoogleLogin = async () => {
+  const { error } = await supabase.auth.signInWithOAuth({
+    provider: 'google',
+    options: {
+      redirectTo: window.location.origin + '/tabs/home'
+    }
+  });
+  
+  if (error) {
+    const toast = await toastController.create({
+      message: error.message,
+      duration: 3000,
+      color: 'danger'
+    });
+    return toast.present();
+  }
 };
 
 const goToRegister = () => {

@@ -17,18 +17,11 @@
         <div class="menu-group">
           <h3 class="menu-group-title">Account</h3>
           <ion-list class="profile-list" lines="none">
-            <ion-item button class="profile-item" :detail="false">
+            <ion-item button class="profile-item" :detail="false" @click="openEditModal">
               <div class="item-icon-box bg-blue" slot="start">
                 <ion-icon :icon="personOutline" class="color-blue"></ion-icon>
               </div>
               <ion-label>Edit Profile</ion-label>
-              <ion-icon :icon="chevronForwardOutline" slot="end" class="chevron-icon"></ion-icon>
-            </ion-item>
-            <ion-item button class="profile-item" :detail="false">
-              <div class="item-icon-box bg-orange" slot="start">
-                <ion-icon :icon="lockClosedOutline" class="color-orange"></ion-icon>
-              </div>
-              <ion-label>Change Password</ion-label>
               <ion-icon :icon="chevronForwardOutline" slot="end" class="chevron-icon"></ion-icon>
             </ion-item>
           </ion-list>
@@ -37,7 +30,7 @@
         <div class="menu-group">
           <h3 class="menu-group-title">General</h3>
           <ion-list class="profile-list" lines="none">
-            <ion-item button class="profile-item" :detail="false">
+            <ion-item button class="profile-item" :detail="false" @click="router.push('/settings')">
               <div class="item-icon-box bg-gray" slot="start">
                 <ion-icon :icon="settingsOutline" class="color-gray"></ion-icon>
               </div>
@@ -54,12 +47,52 @@
           </ion-list>
         </div>
 
-        <ion-button expand="block" class="logout-btn" fill="clear" @click="handleLogout" :disabled="isLoading">
+        <ion-button expand="block" class="logout-btn" v-slot="" fill="clear" @click="handleLogout" :disabled="isLoading">
           <ion-icon :icon="logOutOutline" slot="start"></ion-icon>
           {{ isLoading ? 'Logging out...' : 'Log Out' }}
         </ion-button>
       </div>
     </ion-content>
+
+    <!-- Edit Profile Modal -->
+    <ion-modal :is-open="isEditModalOpen" @didDismiss="closeEditModal">
+      <ion-header class="ion-no-border">
+        <ion-toolbar>
+          <ion-title>Edit Profile</ion-title>
+          <ion-buttons slot="end">
+            <ion-button @click="closeEditModal">Back</ion-button>
+          </ion-buttons>
+        </ion-toolbar>
+      </ion-header>
+      <ion-content class="app-background">
+        <div class="profile-content-section">
+          <div class="menu-group">
+            <h3 class="menu-group-title">Personal Information</h3>
+            <ion-list class="profile-list" lines="none">
+              <ion-item class="profile-item">
+                <ion-input label="Full Name" label-placement="stacked" v-model="editData.nama" type="text" placeholder="Masukkan nama"></ion-input>
+              </ion-item>
+              <ion-item class="profile-item">
+                <ion-input label="NIM" label-placement="stacked" v-model="editData.nim" type="text" placeholder="Masukkan NIM"></ion-input>
+              </ion-item>
+              <ion-item class="profile-item">
+                <div style="width: 100%; padding: 12px 0;">
+                  <div style="font-size: 14px; color: #718096; margin-bottom: 8px;">Upload Avatar Baru (Otomatis Dikompresi)</div>
+                  <input type="file" accept="image/*" @change="handleFileUpload" :disabled="isSaving" style="width: 100%; font-size: 14px;" />
+                  
+                  <div style="font-size: 14px; color: #718096; margin-top: 16px; margin-bottom: 4px;">Atau gunakan URL Avatar</div>
+                  <ion-input v-model="editData.avatar_url" type="url" placeholder="https://..." style="--padding-start: 0; min-height: 40px;"></ion-input>
+                </div>
+              </ion-item>
+            </ion-list>
+          </div>
+          
+          <ion-button expand="block" style="--background: #2b5a9b; --color: white; margin-top: 24px; --border-radius: 12px; height: 48px; font-family: 'Inter', sans-serif; font-weight: 600;" fill="solid" @click="saveProfile" :disabled="isSaving">
+            {{ isSaving ? 'Menyimpan...' : 'Simpan Perubahan' }}
+          </ion-button>
+        </div>
+      </ion-content>
+    </ion-modal>
   </ion-page>
 </template>
 
@@ -67,7 +100,9 @@
 import { ref, onMounted } from 'vue';
 import {
   IonPage, IonContent, IonAvatar, IonList, IonItem,
-  IonIcon, IonLabel, IonBadge, IonButton
+  IonIcon, IonLabel, IonBadge, IonButton,
+  IonModal, IonHeader, IonToolbar, IonTitle, IonButtons, IonInput,
+  toastController
 } from '@ionic/vue';
 import {
   personOutline, lockClosedOutline, settingsOutline,
@@ -76,10 +111,115 @@ import {
 import CustomHeader from "@/components/CustomHeader.vue";
 import { supabase } from "../supabase";
 import { useRouter } from 'vue-router';
+import imageCompression from 'browser-image-compression';
 
 const userData = ref<any>(null);
 const isLoading = ref(true);
 const router = useRouter();
+
+const isEditModalOpen = ref(false);
+const isSaving = ref(false);
+const selectedFile = ref<File | null>(null);
+const editData = ref({
+  nama: '',
+  nim: '',
+  avatar_url: ''
+});
+
+const handleFileUpload = (event: any) => {
+  const file = event.target.files[0];
+  if (file) {
+    selectedFile.value = file;
+  }
+};
+
+const openEditModal = () => {
+  if (userData.value) {
+    editData.value = {
+      nama: userData.value.nama || '',
+      nim: userData.value.nim || '',
+      avatar_url: userData.value.avatar_url || ''
+    };
+  }
+  selectedFile.value = null;
+  isEditModalOpen.value = true;
+};
+
+const closeEditModal = () => {
+  isEditModalOpen.value = false;
+};
+
+const showToast = async (message: string, color: string = 'success') => {
+  const toast = await toastController.create({
+    message,
+    duration: 2000,
+    color,
+    position: 'top'
+  });
+  await toast.present();
+};
+
+const saveProfile = async () => {
+  if (!userData.value || !userData.value.id) {
+    showToast('Data profil belum dimuat dengan benar', 'danger');
+    return;
+  }
+  
+  isSaving.value = true;
+  try {
+    let finalAvatarUrl = editData.value.avatar_url;
+
+    if (selectedFile.value) {
+      const options = {
+        maxSizeMB: 1,
+        maxWidthOrHeight: 800,
+        useWebWorker: true,
+      };
+      
+      const compressedFile = await imageCompression(selectedFile.value, options);
+      
+      const fileName = `${userData.value.id}_${Date.now()}.jpg`;
+      const { error: uploadError } = await supabase.storage
+        .from('avatars')
+        .upload(fileName, compressedFile, { upsert: true });
+
+      if (uploadError) throw uploadError;
+
+      const { data } = supabase.storage
+        .from('avatars')
+        .getPublicUrl(fileName);
+        
+      finalAvatarUrl = data.publicUrl;
+    }
+
+    const { error } = await supabase
+      .from('users')
+      .update({
+        nama: editData.value.nama,
+        nim: editData.value.nim,
+        avatar_url: finalAvatarUrl
+      })
+      .eq('id', userData.value.id);
+
+    if (error) throw error;
+    
+    // Update local data
+    userData.value = {
+      ...userData.value,
+      nama: editData.value.nama,
+      nim: editData.value.nim,
+      avatar_url: finalAvatarUrl
+    };
+    
+    showToast('Profil berhasil diperbarui!');
+    closeEditModal();
+  } catch (error: any) {
+    console.error('Update Profile Error:', error);
+    showToast(error.message || 'Gagal memperbarui profil', 'danger');
+  } finally {
+    isSaving.value = false;
+  }
+};
 
 const fetchUserProfile = async () => {
     isLoading.value = true;
@@ -87,6 +227,8 @@ const fetchUserProfile = async () => {
         const { data: authData, error: authError } = await supabase.auth.getUser();
         if (authError || !authData.user) {
             console.error("Auth Error:", authError);
+            showToast("Sesi Anda telah berakhir, silakan login kembali", "warning");
+            router.push('/login');
             return;
         }
         
@@ -98,12 +240,14 @@ const fetchUserProfile = async () => {
             
         if (publicError) {
             console.error("Public User Fetch Error:", publicError);
+            showToast("Data profil tidak ditemukan di database", "danger");
         } else {
             console.log("Data dari Supabase:", publicUser);
             userData.value = publicUser;
         }
-    } catch (e) {
+    } catch (e: any) {
         console.error("Unexpected Error:", e);
+        showToast("Terjadi kesalahan tidak terduga: " + e.message, "danger");
     } finally {
         isLoading.value = false;
     }
@@ -244,5 +388,5 @@ onMounted(() => {
   font-family: "Inter", sans-serif;
   font-weight: 600;
   font-size: 16px;
-}
+  }
 </style>
