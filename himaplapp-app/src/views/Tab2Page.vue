@@ -1,6 +1,6 @@
 <template>
   <ion-page>
-    <CustomHeader title="Projects" />
+    <CustomHeader title="Events" />
 
     <ion-content :fullscreen="true" class="app-background">
       <div class="ion-padding">

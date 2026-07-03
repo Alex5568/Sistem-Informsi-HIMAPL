@@ -9,8 +9,8 @@
         </ion-tab-button>
 
         <ion-tab-button tab="tab2" href="/tabs/projects">
-          <ion-icon aria-hidden="true" :icon="barChart" />
-          <ion-label>Projects</ion-label>
+          <ion-icon aria-hidden="true" :icon="calendar" />
+          <ion-label>Events</ion-label>
         </ion-tab-button>
 
         <ion-tab-button tab="tab3" href="/tabs/notifications">
@@ -29,5 +29,5 @@
 
 <script setup lang="ts">
 import { IonTabBar, IonTabButton, IonTabs, IonLabel, IonIcon, IonPage, IonRouterOutlet } from '@ionic/vue';
-import { home, barChart, notifications, person } from 'ionicons/icons';
+import { home, barChart, notifications, person, calendar } from 'ionicons/icons';
 </script>

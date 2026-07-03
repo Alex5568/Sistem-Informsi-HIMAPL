@@ -12,11 +12,23 @@
             </ion-list-header>
 
             <ion-menu-toggle :auto-hide="false" v-for="(p, i) in appPages" :key="i">
-              <ion-item @click="selectedIndex = i" router-direction="root" :router-link="p.url" lines="none" :detail="false" class="menu-item" :class="{ selected: selectedIndex === i }">
+              <ion-item @click="selectedIndex = i" router-direction="root" :router-link="p.url" lines="none" :detail="false" class="menu-item" :class="{ selected: selectedIndex === i && !p.url.startsWith('/manage') }">
                 <ion-icon aria-hidden="true" slot="start" :ios="p.iosIcon" :md="p.mdIcon"></ion-icon>
                 <ion-label>{{ p.title }}</ion-label>
               </ion-item>
             </ion-menu-toggle>
+
+            <div v-if="isManager" class="manage-section">
+              <ion-list-header class="manage-header">
+                <ion-label>Manage</ion-label>
+              </ion-list-header>
+              <ion-menu-toggle :auto-hide="false" v-for="(p, i) in managePages" :key="'m-' + i">
+                <ion-item router-direction="root" :router-link="p.url" lines="none" :detail="false" class="menu-item" router-link-active="selected">
+                  <ion-icon aria-hidden="true" slot="start" :ios="p.iosIcon" :md="p.mdIcon"></ion-icon>
+                  <ion-label>{{ p.title }}</ion-label>
+                </ion-item>
+              </ion-menu-toggle>
+            </div>
           </ion-list>
 
           <div class="menu-footer">
@@ -57,7 +69,9 @@ import {
   calendarOutline, calendarSharp,
   personOutline, personSharp,
   settingsOutline, settingsSharp,
-  logOutOutline, logOutSharp
+  logOutOutline, logOutSharp,
+  newspaperOutline, newspaperSharp,
+  notificationsOutline, notificationsSharp
 } from 'ionicons/icons';
 
 const route = useRoute();
@@ -95,6 +109,27 @@ const appPages = [
   }
 ];
 
+const managePages = [
+  {
+    title: 'Events',
+    url: '/manage/events',
+    iosIcon: calendarOutline,
+    mdIcon: calendarSharp,
+  },
+  {
+    title: 'News',
+    url: '/manage/news',
+    iosIcon: newspaperOutline,
+    mdIcon: newspaperSharp,
+  },
+  {
+    title: 'Notifications',
+    url: '/manage/notifications',
+    iosIcon: notificationsOutline,
+    mdIcon: notificationsSharp,
+  }
+];
+
 const handleLogout = async () => {
   await supabase.auth.signOut();
   router.push('/login');
@@ -107,21 +142,28 @@ if (path !== undefined) {
 
 const userName = ref('Guest');
 const userEmail = ref('');
+const userRole = ref('');
+
+const isManager = computed(() => {
+  return ['Dosen', 'Ketua', 'Ketua Divisi'].includes(userRole.value);
+});
 
 const fetchUserProfile = async (user: any) => {
   if (user) {
     userEmail.value = user.email || '';
     const { data } = await supabase
       .from('users')
-      .select('nama')
+      .select('nama, role')
       .eq('id', user.id)
       .single();
     if (data) {
       userName.value = data.nama;
+      userRole.value = data.role || '';
     }
   } else {
     userName.value = 'Guest';
     userEmail.value = '';
+    userRole.value = '';
   }
 };
 
@@ -208,5 +250,22 @@ ion-menu.md ion-list {
 
 .logout-item ion-icon {
   color: #ef4444;
+}
+
+.manage-section {
+  margin-top: 16px;
+  border-top: 1px solid #e2e8f0;
+  padding-top: 8px;
+}
+
+.manage-header {
+  font-family: "Manrope", sans-serif;
+  font-weight: 700;
+  font-size: 14px;
+  color: #64748b;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  min-height: unset;
+  padding-bottom: 8px;
 }
 </style>

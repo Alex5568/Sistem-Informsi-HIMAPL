@@ -77,6 +77,21 @@ const routes: Array<RouteRecordRaw> = [
     path: '/notification/:id',
     name: 'NotificationDetail',
     component: () => import('../views/NotificationDetailPage.vue')
+  },
+  {
+    path: '/manage/events',
+    name: 'ManageEvents',
+    component: () => import('../views/ManageEventsPage.vue')
+  },
+  {
+    path: '/manage/news',
+    name: 'ManageNews',
+    component: () => import('../views/ManageNewsPage.vue')
+  },
+  {
+    path: '/manage/notifications',
+    name: 'ManageNotifications',
+    component: () => import('../views/ManageNotificationsPage.vue')
   }
 ];
 

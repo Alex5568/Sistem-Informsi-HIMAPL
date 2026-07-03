@@ -66,12 +66,95 @@
               </div>
             </ion-card-content>
           </ion-card>
+
+          <!-- Task Section -->
+          <ion-card class="task-card">
+            <ion-card-content>
+              <h3>Task</h3>
+              <div v-if="tasks && tasks.length > 0" class="task-detail">
+                <ion-list lines="none" class="task-list">
+                  <ion-item v-for="task in tasks" :key="task.id" class="task-item">
+                    <ion-checkbox 
+                      slot="start" 
+                      :checked="task.status_selesai" 
+                      :disabled="!isRegistered"
+                      @ionChange="toggleTaskStatus(task)"
+                    ></ion-checkbox>
+                    <ion-label :class="{ 'completed-task': task.status_selesai }" class="event-desc" style="white-space: normal;">
+                      {{ task.nama_tugas }}
+                    </ion-label>
+                  </ion-item>
+                </ion-list>
+              </div>
+              <div v-else class="no-task">
+                <p class="event-desc">No task available.</p>
+              </div>
+            </ion-card-content>
+          </ion-card>
+
+          <!-- Documentation Upload Button -->
+          <div style="margin: 0 16px;">
+            <ion-button expand="block" class="upload-btn" @click="triggerUpload" :disabled="isUploading">
+              {{ isUploading ? 'Uploading...' : 'Upload Photo' }}
+            </ion-button>
+            <input type="file" ref="fileInputGallery" accept="image/*" style="display: none;" @change="handleFileUpload" />
+            <input type="file" ref="fileInputCamera" accept="image/*" capture="environment" style="display: none;" @change="handleFileUpload" />
+          </div>
+
+          <!-- Dokumentasi Section -->
+          <div class="dokumentasi-section">
+            <div class="doc-header">
+              <h3>Documentation</h3>
+              <a href="#" class="view-all" @click.prevent="isDocsModalOpen = true">View All</a>
+            </div>
+            
+            <div class="doc-grid" v-if="docs.length > 0">
+              <div class="doc-main">
+                <img :src="docs[0].url_foto" alt="Doc 1" />
+              </div>
+              <div class="doc-side" v-if="docs.length > 1">
+                <img :src="docs[1].url_foto" alt="Doc 2" class="side-img" />
+                <div class="side-img-wrapper" v-if="docs.length > 2">
+                  <img :src="docs[2].url_foto" alt="Doc 3" class="side-img" />
+                  <div class="more-overlay" v-if="docs.length > 3">
+                    +{{ docs.length - 3 }}
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div v-else class="no-doc">
+              <p>No documentation available.</p>
+            </div>
+          </div>
         </div>
       </div>
       
       <div v-else class="loading-state" style="text-align: center; margin-top: 50px; color: white;">
         Event not found.
       </div>
+
+      <!-- Documentation Modal -->
+      <ion-modal :is-open="isDocsModalOpen" @didDismiss="isDocsModalOpen = false">
+        <ion-header>
+          <ion-toolbar>
+            <ion-title>All Documentation</ion-title>
+            <ion-buttons slot="end">
+              <ion-button @click="isDocsModalOpen = false">Close</ion-button>
+            </ion-buttons>
+          </ion-toolbar>
+        </ion-header>
+        <ion-content class="ion-padding">
+          <div class="scroll-container">
+            <div class="scroll-item" v-for="doc in docs" :key="doc.id">
+              <img :src="doc.url_foto" alt="Documentation Image" />
+              <ion-button expand="block" fill="clear" @click="downloadImage(doc.url_foto, doc.id)">
+                <ion-icon :icon="downloadOutline" slot="start"></ion-icon>
+                Download
+              </ion-button>
+            </div>
+          </div>
+        </ion-content>
+      </ion-modal>
     </ion-content>
 
     <!-- Footer with Action Button -->
@@ -108,9 +191,10 @@
 import { 
   IonPage, IonHeader, IonToolbar, IonButtons, IonBackButton, IonTitle, 
   IonContent, IonIcon, IonBadge, IonFooter, IonButton, toastController,
-  IonCard, IonCardContent 
+  IonCard, IonCardContent, IonList, IonItem, IonCheckbox, IonLabel,
+  actionSheetController, alertController, IonModal
 } from '@ionic/vue';
-import { calendarOutline, locationOutline, peopleOutline } from 'ionicons/icons';
+import { calendarOutline, locationOutline, peopleOutline, cameraOutline, imageOutline, linkOutline, closeOutline, downloadOutline } from 'ionicons/icons';
 import { ref, onMounted, computed } from 'vue';
 import { useRoute } from 'vue-router';
 import { supabase } from '../supabase';
@@ -119,6 +203,12 @@ const route = useRoute();
 const eventId = Number(Array.isArray(route.params.id) ? route.params.id[0] : route.params.id);
 
 const event = ref<any>(null);
+const tasks = ref<any[]>([]);
+const docs = ref<any[]>([]);
+const fileInputGallery = ref<HTMLInputElement | null>(null);
+const fileInputCamera = ref<HTMLInputElement | null>(null);
+const isUploading = ref(false);
+const isDocsModalOpen = ref(false);
 const isLoading = ref(true);
 const isProcessing = ref(false);
 const isRegistered = ref(false);
@@ -140,6 +230,48 @@ const fetchEventData = async () => {
       
     if (eventError) throw eventError;
     event.value = eventData;
+
+    // Fetch Tasks
+    const { data: tasksData, error: tasksError } = await supabase
+      .from('tugas')
+      .select('*')
+      .eq('event_id', eventId);
+      
+    if (!tasksError && tasksData) {
+      tasks.value = tasksData;
+      
+      // Fetch user completions for these tasks
+      if (currentUserId.value && tasksData.length > 0) {
+        const taskIds = tasksData.map((t: any) => t.id);
+        const { data: completions } = await supabase
+          .from('tugas_completed')
+          .select('tugas_id')
+          .in('tugas_id', taskIds)
+          .eq('user_id', currentUserId.value);
+          
+        if (completions) {
+          const completedTaskIds = new Set(completions.map(c => c.tugas_id));
+          tasks.value.forEach(task => {
+            task.status_selesai = completedTaskIds.has(task.id);
+          });
+        } else {
+          tasks.value.forEach(task => task.status_selesai = false);
+        }
+      } else {
+        tasks.value.forEach(task => task.status_selesai = false);
+      }
+    }
+
+    // Fetch Dokumentasi
+    const { data: docsData } = await supabase
+      .from('dokumentasi')
+      .select('*')
+      .eq('event_id', eventId)
+      .order('created_at', { ascending: false });
+    
+    if (docsData) {
+      docs.value = docsData;
+    }
 
     // Fetch Registration count
     const { count, error: countError } = await supabase
@@ -179,6 +311,242 @@ const fetchEventData = async () => {
 onMounted(() => {
   fetchEventData();
 });
+
+const handleLinkUpload = async (url: string) => {
+  if (!url || !currentUserId.value) return;
+  isUploading.value = true;
+  try {
+    const { error: insertError } = await supabase
+      .from('dokumentasi')
+      .insert({
+        event_id: eventId,
+        uploader_id: currentUserId.value,
+        url_foto: url
+      });
+    if (insertError) throw insertError;
+    showToast("Link uploaded successfully!", "success");
+    fetchEventData();
+  } catch (err: any) {
+    console.error("Link upload error:", err);
+    showToast(err.message || "Failed to upload link.", "danger");
+  } finally {
+    isUploading.value = false;
+  }
+};
+
+const showLinkPrompt = async () => {
+  const alert = await alertController.create({
+    header: 'Paste Image Link',
+    inputs: [
+      {
+        name: 'imageUrl',
+        type: 'url',
+        placeholder: 'https://example.com/image.jpg'
+      }
+    ],
+    buttons: [
+      {
+        text: 'Cancel',
+        role: 'cancel'
+      },
+      {
+        text: 'Upload',
+        handler: (data) => {
+          if (data.imageUrl) {
+            handleLinkUpload(data.imageUrl);
+          }
+        }
+      }
+    ]
+  });
+  await alert.present();
+};
+
+const triggerUpload = async () => {
+  if (!currentUserId.value) {
+    showToast("Please login first", "warning");
+    return;
+  }
+  
+  const actionSheet = await actionSheetController.create({
+    header: 'Select Upload Method',
+    buttons: [
+      {
+        text: 'Camera',
+        icon: cameraOutline,
+        handler: () => {
+          fileInputCamera.value?.click();
+        }
+      },
+      {
+        text: 'Gallery',
+        icon: imageOutline,
+        handler: () => {
+          fileInputGallery.value?.click();
+        }
+      },
+      {
+        text: 'Paste Image Link',
+        icon: linkOutline,
+        handler: () => {
+          showLinkPrompt();
+        }
+      },
+      {
+        text: 'Cancel',
+        icon: closeOutline,
+        role: 'cancel'
+      }
+    ]
+  });
+  await actionSheet.present();
+};
+
+const compressImage = (file: File, maxWidth = 1024, quality = 0.8): Promise<Blob> => {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.readAsDataURL(file);
+    reader.onload = (event) => {
+      const img = new Image();
+      img.src = event.target?.result as string;
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        let width = img.width;
+        let height = img.height;
+
+        if (width > maxWidth) {
+          height = Math.round((height * maxWidth) / width);
+          width = maxWidth;
+        }
+
+        canvas.width = width;
+        canvas.height = height;
+
+        const ctx = canvas.getContext('2d');
+        if (!ctx) {
+          reject(new Error("Canvas context is not available."));
+          return;
+        }
+        
+        ctx.drawImage(img, 0, 0, width, height);
+        
+        canvas.toBlob((blob) => {
+          if (blob) resolve(blob);
+          else reject(new Error("Canvas to Blob failed."));
+        }, 'image/jpeg', quality);
+      };
+      img.onerror = (error) => reject(error);
+    };
+    reader.onerror = (error) => reject(error);
+  });
+};
+
+const handleFileUpload = async (event: Event) => {
+  const target = event.target as HTMLInputElement;
+  const file = target.files?.[0];
+  if (!file) return;
+
+  isUploading.value = true;
+  try {
+    // Compress the image before uploading
+    const compressedBlob = await compressImage(file, 1024, 0.7);
+    const fileName = `${Math.random()}.jpg`;
+    const filePath = `event_${eventId}/${fileName}`;
+
+    // Upload to Supabase Storage bucket 'dokumentasi-event'
+    const { error: uploadError, data } = await supabase.storage
+      .from('dokumentasi-event')
+      .upload(filePath, compressedBlob, {
+        contentType: 'image/jpeg'
+      });
+
+    if (uploadError) throw uploadError;
+
+    // Get public URL
+    const { data: { publicUrl } } = supabase.storage
+      .from('dokumentasi-event')
+      .getPublicUrl(filePath);
+
+    // Insert to table
+    const { error: insertError } = await supabase
+      .from('dokumentasi')
+      .insert({
+        event_id: eventId,
+        uploader_id: currentUserId.value,
+        url_foto: publicUrl
+      });
+
+    if (insertError) throw insertError;
+
+    showToast("Photo uploaded successfully!", "success");
+    fetchEventData(); // Refresh list
+
+  } catch (err: any) {
+    console.error("Upload error:", err);
+    showToast(err.message || "Failed to upload photo.", "danger");
+  } finally {
+    isUploading.value = false;
+    if (fileInputGallery.value) fileInputGallery.value.value = '';
+    if (fileInputCamera.value) fileInputCamera.value.value = '';
+  }
+};
+
+const downloadImage = async (url: string, id: number) => {
+  try {
+    const response = await fetch(url);
+    const blob = await response.blob();
+    const objectUrl = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = objectUrl;
+    link.download = `dokumentasi_${eventId}_${id}.jpg`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(objectUrl);
+  } catch (err) {
+    console.error("Failed to download", err);
+    showToast("Failed to download image. CORS might be blocking it.", "danger");
+  }
+};
+
+const toggleTaskStatus = async (task: any) => {
+  if (!currentUserId.value) {
+    showToast("Silakan login terlebih dahulu", "warning");
+    return;
+  }
+  if (!isRegistered.value) {
+    showToast("Anda harus melakukan registrasi event terlebih dahulu untuk menyelesaikan tugas.", "warning");
+    return;
+  }
+
+  const newStatus = !task.status_selesai;
+  // Optimistic UI update
+  task.status_selesai = newStatus;
+  
+  try {
+    if (newStatus) {
+      // Mark as completed
+      const { error } = await supabase
+        .from('tugas_completed')
+        .insert([{ tugas_id: task.id, user_id: currentUserId.value }]);
+      if (error) throw error;
+    } else {
+      // Unmark
+      const { error } = await supabase
+        .from('tugas_completed')
+        .delete()
+        .eq('tugas_id', task.id)
+        .eq('user_id', currentUserId.value);
+      if (error) throw error;
+    }
+    showToast(newStatus ? 'Tugas diselesaikan' : 'Status tugas dibatalkan', 'success');
+  } catch (err: any) {
+    // Revert on error
+    task.status_selesai = !newStatus;
+    console.error("Error updating task status:", err);
+    showToast("Gagal memperbarui status tugas.", "danger");
+  }
+};
 
 const isPastEvent = computed(() => {
   if (!event.value) return false;
@@ -349,6 +717,145 @@ const formatTime = (dateStr: string) => {
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
   background: white;
 }
+.task-card {
+  margin: 16px;
+  border-radius: 16px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+  background: white;
+  border: 1.5px solid #3b82f6;
+}
+.task-card h3 {
+  font-size: 18px;
+  color: #0f172a;
+  margin-bottom: 12px;
+  font-weight: 700;
+  margin-top: 0;
+}
+.task-list {
+  background: transparent;
+  padding: 0;
+}
+.task-item {
+  --background: transparent;
+  --padding-start: 0;
+  --inner-padding-end: 0;
+}
+.completed-task {
+  text-decoration: line-through;
+  color: #94a3b8;
+}
+
+/* Dokumentasi CSS */
+.dokumentasi-section {
+  margin: 16px;
+}
+.doc-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+}
+.doc-header h3 {
+  font-size: 18px;
+  font-weight: 700;
+  color: #0f172a;
+  margin: 0;
+}
+.view-all {
+  color: #2563eb;
+  font-size: 14px;
+  text-decoration: none;
+  font-weight: 600;
+}
+.doc-grid {
+  display: grid;
+  grid-template-columns: 2fr 1fr;
+  gap: 8px;
+  height: 200px;
+}
+.doc-main {
+  width: 100%;
+  height: 100%;
+  border-radius: 12px;
+  overflow: hidden;
+  background: #e2e8f0;
+}
+.doc-main img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.doc-side {
+  display: grid;
+  grid-template-rows: 1fr 1fr;
+  gap: 8px;
+  height: 100%;
+}
+.side-img-wrapper {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  border-radius: 12px;
+  overflow: hidden;
+  background: #e2e8f0;
+}
+.side-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 12px;
+}
+.more-overlay {
+  position: absolute;
+  top: 0; left: 0; width: 100%; height: 100%;
+  background: rgba(0,0,0,0.5);
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+  font-weight: bold;
+}
+.no-doc {
+  text-align: center;
+  padding: 20px;
+  background: white;
+  border-radius: 12px;
+}
+.no-doc p {
+  color: #64748b;
+  margin: 0;
+}
+.upload-btn {
+  margin-top: 16px;
+  --background: #eff6ff;
+  --color: #2563eb;
+  --box-shadow: none;
+  font-weight: 600;
+}
+
+/* Modal Scroll Container */
+.scroll-container {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding-bottom: 16px;
+}
+.scroll-item {
+  border-radius: 12px;
+  background: #f8fafc;
+  overflow: hidden;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+  display: flex;
+  flex-direction: column;
+}
+.scroll-item img {
+  width: 100%;
+  height: 300px;
+  object-fit: contain;
+  background: #000;
+}
+
 .details-section {
   color: #1e293b;
   margin-top: -24px; /* Pull it slightly over the hero image overlay if desired, or keep 0 */
