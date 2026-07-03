@@ -158,9 +158,9 @@
                     <ion-select-option value="kelompok">Kelompok (Division)</ion-select-option>
                   </ion-select>
                   
-                  <ion-select v-if="task.assign_type === 'individu'" label="Select Person" label-placement="floating" v-model="task.assigned_to_id" style="margin-top: 8px;">
-                    <ion-select-option v-for="u in usersList" :key="u.id" :value="u.id">{{ u.nama }}</ion-select-option>
-                  </ion-select>
+                  <ion-item v-if="task.assign_type === 'individu'" button @click="openUserSearchModal(index)" style="margin-top: 8px; --padding-start: 0; --inner-padding-end: 0;">
+                    <ion-input label="Select Person" label-placement="floating" readonly :value="getSelectedUserName(task.assigned_to_id)" placeholder="Click to select a person"></ion-input>
+                  </ion-item>
                   
                   <ion-select v-if="task.assign_type === 'kelompok'" label="Select Division" label-placement="floating" v-model="task.assigned_to_divisi_id" style="margin-top: 8px;">
                     <ion-select-option v-for="d in divisiList" :key="d.id" :value="d.id">{{ d.nama_divisi }}</ion-select-option>
@@ -180,6 +180,35 @@
         </ion-content>
       </ion-modal>
 
+      <!-- User Search Modal -->
+      <ion-modal :is-open="isUserSelectModalOpen" @didDismiss="isUserSelectModalOpen = false">
+        <ion-header>
+          <ion-toolbar>
+            <ion-title>Select Person</ion-title>
+            <ion-buttons slot="end">
+              <ion-button @click="isUserSelectModalOpen = false">Close</ion-button>
+            </ion-buttons>
+          </ion-toolbar>
+          <ion-toolbar>
+            <ion-searchbar v-model="userSearchQuery" placeholder="Search by name or NIM"></ion-searchbar>
+          </ion-toolbar>
+        </ion-header>
+        <ion-content>
+          <ion-list>
+            <ion-item v-for="u in filteredUsers" :key="u.id" button @click="selectUser(u.id)">
+              <ion-label>
+                <h2>{{ u.nama }}</h2>
+                <p v-if="u.nim">{{ u.nim }}</p>
+              </ion-label>
+              <ion-icon v-if="activeTaskIndex !== null && newTasks[activeTaskIndex].assigned_to_id === u.id" slot="end" name="checkmark-outline" color="primary"></ion-icon>
+            </ion-item>
+            <ion-item v-if="filteredUsers.length === 0">
+              <ion-label class="ion-text-center" color="medium">No users found</ion-label>
+            </ion-item>
+          </ion-list>
+        </ion-content>
+      </ion-modal>
+
     </ion-content>
   </ion-page>
 </template>
@@ -189,10 +218,10 @@ import {
   IonPage, IonContent, IonButton, 
   IonAccordionGroup, IonAccordion, IonItem, IonLabel, IonIcon, toastController, alertController,
   IonModal, IonHeader, IonToolbar, IonTitle, IonButtons, IonList, IonInput, IonTextarea, IonSelect, IonSelectOption,
-  IonSegment, IonSegmentButton, IonDatetime, IonDatetimeButton, IonPopover
+  IonSegment, IonSegmentButton, IonDatetime, IonDatetimeButton, IonPopover, IonSearchbar
 } from '@ionic/vue';
 import { createOutline, trashOutline } from 'ionicons/icons';
-import { ref, onMounted } from 'vue';
+import { ref, onMounted, computed } from 'vue';
 import CustomHeader from '../components/CustomHeader.vue';
 import { supabase } from '../supabase';
 
@@ -208,6 +237,37 @@ const usersList = ref<any[]>([]);
 const divisiList = ref<any[]>([]);
 
 const newTasks = ref<{ nama_tugas: string, assign_type: 'global' | 'individu' | 'kelompok', assigned_to_id: string | null, assigned_to_divisi_id: number | null }[]>([]);
+
+const isUserSelectModalOpen = ref(false);
+const activeTaskIndex = ref<number | null>(null);
+const userSearchQuery = ref('');
+
+const filteredUsers = computed(() => {
+  const query = userSearchQuery.value.toLowerCase();
+  if (!query) return usersList.value;
+  return usersList.value.filter(u => 
+    u.nama.toLowerCase().includes(query) || 
+    (u.nim && u.nim.toLowerCase().includes(query))
+  );
+});
+
+const openUserSearchModal = (index: number) => {
+  activeTaskIndex.value = index;
+  isUserSelectModalOpen.value = true;
+};
+
+const selectUser = (id: string) => {
+  if (activeTaskIndex.value !== null) {
+    newTasks.value[activeTaskIndex.value].assigned_to_id = id;
+  }
+  isUserSelectModalOpen.value = false;
+};
+
+const getSelectedUserName = (userId: string | null) => {
+  if (!userId) return '';
+  const u = usersList.value.find(user => user.id === userId);
+  return u ? (u.nim ? `${u.nama} (${u.nim})` : u.nama) : '';
+};
 
 const newEvent = ref({
   nama_event: '',
@@ -247,7 +307,7 @@ const fetchEvents = async () => {
 const fetchUsersAndDivisi = async () => {
   try {
     const [usersRes, divisiRes] = await Promise.all([
-      supabase.from('users').select('id, nama').order('nama'),
+      supabase.from('users').select('id, nama, nim').order('nama'),
       supabase.from('divisi').select('id, nama_divisi').order('nama_divisi')
     ]);
     if (usersRes.data) usersList.value = usersRes.data;

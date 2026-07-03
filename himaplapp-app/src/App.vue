@@ -28,6 +28,24 @@
                   <ion-label>{{ p.title }}</ion-label>
                 </ion-item>
               </ion-menu-toggle>
+              <ion-menu-toggle :auto-hide="false" v-if="isRoleManager">
+                <ion-item router-direction="root" router-link="/manage/roles" lines="none" :detail="false" class="menu-item" router-link-active="selected">
+                  <ion-icon aria-hidden="true" slot="start" :ios="shieldOutline" :md="shieldSharp"></ion-icon>
+                  <ion-label>Roles</ion-label>
+                </ion-item>
+              </ion-menu-toggle>
+            </div>
+
+            <div v-if="isDosen" class="manage-section">
+              <ion-list-header class="manage-header">
+                <ion-label>Reports</ion-label>
+              </ion-list-header>
+              <ion-menu-toggle :auto-hide="false" v-for="(p, i) in reportsPages" :key="'l-' + i">
+                <ion-item router-direction="root" :router-link="p.url" lines="none" :detail="false" class="menu-item" router-link-active="selected">
+                  <ion-icon aria-hidden="true" slot="start" :ios="p.iosIcon" :md="p.mdIcon"></ion-icon>
+                  <ion-label>{{ p.title }}</ion-label>
+                </ion-item>
+              </ion-menu-toggle>
             </div>
           </ion-list>
 
@@ -71,7 +89,10 @@ import {
   settingsOutline, settingsSharp,
   logOutOutline, logOutSharp,
   newspaperOutline, newspaperSharp,
-  notificationsOutline, notificationsSharp
+  notificationsOutline, notificationsSharp,
+  documentTextOutline, documentTextSharp,
+  peopleOutline, peopleSharp,
+  shieldOutline, shieldSharp
 } from 'ionicons/icons';
 
 const route = useRoute();
@@ -106,6 +127,12 @@ const appPages = [
     url: '/settings',
     iosIcon: settingsOutline,
     mdIcon: settingsSharp,
+  },
+  {
+    title: 'Organizational Structure',
+    url: '/organization',
+    iosIcon: peopleOutline,
+    mdIcon: peopleSharp,
   }
 ];
 
@@ -130,6 +157,15 @@ const managePages = [
   }
 ];
 
+const reportsPages = [
+  {
+    title: 'Reports',
+    url: '/reports',
+    iosIcon: documentTextOutline,
+    mdIcon: documentTextSharp,
+  }
+];
+
 const handleLogout = async () => {
   await supabase.auth.signOut();
   router.push('/login');
@@ -146,6 +182,14 @@ const userRole = ref('');
 
 const isManager = computed(() => {
   return ['Dosen', 'Ketua', 'Ketua Divisi'].includes(userRole.value);
+});
+
+const isRoleManager = computed(() => {
+  return ['Dosen', 'Ketua'].includes(userRole.value);
+});
+
+const isDosen = computed(() => {
+  return userRole.value === 'Dosen';
 });
 
 const fetchUserProfile = async (user: any) => {
