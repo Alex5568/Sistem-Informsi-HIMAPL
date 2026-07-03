@@ -125,14 +125,14 @@ ion-content.app-background {
 }
 
 /* Varian Warna Badge */
-.badge-blue {
+.badge-blue, .badge-announcement {
   --background: #a5c8fe;
   --color: #2f5482;
   font-size: 9px;
   padding: 4px 8px;
 }
 
-.badge-orange {
+.badge-orange, .badge-achievement {
   --background: #ffddb3;
   --color: #624000;
   font-size: 9px;
@@ -166,6 +166,15 @@ ion-content.app-background {
   padding: 6px 12px;
   border-radius: 20px;
   border: 1px solid rgba(255,255,255,0.3);
+}
+.additional-badge {
+  background: #ef4444; /* Merah menyala */
+  color: white;
+  padding: 6px 12px;
+  border-radius: 20px;
+  font-weight: 700;
+  font-size: 10px;
+  letter-spacing: 1px;
 }
 .urgent-date {
   color: #cddeff;
@@ -239,6 +248,14 @@ ion-content.app-background {
   font-size: 20px;
   margin: 0;
 }
+.app-section-title {
+  color: #184a85 !important;
+  font-family: "Manrope", sans-serif !important;
+  font-weight: 700 !important;
+  font-size: 20px !important;
+  margin: 0 0 16px 0 !important;
+  padding: 0 16px;
+}
 .see-all-btn {
   --color: #36629f;
   font-weight: 700;
@@ -246,18 +263,7 @@ ion-content.app-background {
   letter-spacing: 0.6px;
 }
 
-.badge-announcement {
-  --background: #a5c8fe;
-  --color: #2f5482;
-  font-size: 9px;
-  padding: 4px 8px;
-}
-.badge-achievement {
-  --background: #ffddb3;
-  --color: #624000;
-  font-size: 9px;
-  padding: 4px 8px;
-}
+
 
 /* =========================================
    SEGMENTED CONTROL (ProjectPage)
@@ -420,23 +426,25 @@ ion-content.app-background {
   color: #a0aec0;
 }
 
-.primary-btn {
+.primary-btn, .secondary-btn, .google-btn {
   display: flex;
   justify-content: center;
   align-items: center;
   width: 100%;
   height: 54px;
-  background-color: #2b5a9b;
-  color: white;
   font-size: 1rem;
   font-weight: 600;
-  border: none;
   border-radius: 14px;
   cursor: pointer;
-  margin-top: 8px;
   transition: all 0.2s ease;
 }
 
+.primary-btn {
+  background-color: #2b5a9b;
+  color: white;
+  border: none;
+  margin-top: 8px;
+}
 .primary-btn:active {
   background-color: #1e457a;
   transform: scale(0.98);
@@ -470,42 +478,23 @@ ion-content.app-background {
 }
 
 .secondary-btn {
-  width: 100%;
-  height: 54px;
   background-color: #e6ebf1;
   color: #1a4985;
-  font-size: 1rem;
-  font-weight: 600;
   border: none;
-  border-radius: 14px;
-  cursor: pointer;
-  transition: all 0.2s ease;
 }
-
 .secondary-btn:active {
   background-color: #d2dbe5;
   transform: scale(0.98);
 }
 
 .google-btn {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  width: 100%;
-  height: 54px;
   background-color: #ffffff;
   color: #424750;
-  font-size: 1rem;
-  font-weight: 600;
   border: 1px solid #e2e8f0;
-  border-radius: 14px;
-  cursor: pointer;
   margin-top: 16px;
   margin-bottom: 24px;
-  transition: all 0.2s ease;
   box-shadow: 0 2px 4px rgba(0,0,0,0.02);
 }
-
 .google-btn:active {
   background-color: #f8fafc;
   transform: scale(0.98);

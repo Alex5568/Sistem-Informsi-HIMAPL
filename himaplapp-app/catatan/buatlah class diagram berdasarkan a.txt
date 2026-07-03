@@ -55,3 +55,5 @@ buatlah class diagram berdasarkan analisis fungsional berikut:
 -Anggota bisa update status tugasnya
 
 -Pengguna biasa (anggota) hanya bisa menghapus/mengubah foto yang ia unggah sendiri, sedangkan Ketua dan Ketua Divisi bisa menghapus foto milik siapa saja sebagai bentuk moderasi.
+
+-Semua pengguna dapat menghapus akunnya

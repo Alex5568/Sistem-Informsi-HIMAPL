@@ -5,35 +5,54 @@
     <ion-content class="app-background">
       <div class="ion-padding">
         
-        <div class="urgent-card" v-if="upcomingEvent && !isLoading">
-          <div class="urgent-header">
-            <ion-badge class="urgent-badge">Upcoming</ion-badge>
-            <div class="urgent-date">
-              <ion-icon :icon="calendarOutline"></ion-icon>
-              <span>{{ upcomingEvent.start_date ? new Date(upcomingEvent.start_date).toLocaleDateString('id-ID', { year: 'numeric', month: 'short', day: 'numeric' }).toUpperCase() : 'TBD' }}</span>
+        <div class="urgent-card" v-if="!isLoading">
+          <template v-if="upcomingEvent">
+            <div class="urgent-header">
+              <div style="display: flex; gap: 8px; align-items: center;">
+                <ion-badge class="urgent-badge">Upcoming</ion-badge>
+                <ion-badge v-if="additionalEventsCount > 0" class="additional-badge">+{{ additionalEventsCount }} Events</ion-badge>
+              </div>
+              <div class="urgent-date">
+                <ion-icon :icon="calendarOutline"></ion-icon>
+                <span>{{ upcomingEvent.start_date ? new Date(upcomingEvent.start_date).toLocaleDateString('id-ID', { year: 'numeric', month: 'short', day: 'numeric' }).toUpperCase() : 'TBD' }}</span>
+              </div>
             </div>
-          </div>
-          
-          <h2 class="urgent-title">
-            {{ upcomingEvent.nama_event }}
-          </h2>
-          <p class="urgent-subtitle">
-            {{ upcomingEvent.deskripsi }}
-          </p>
+            
+            <h2 class="urgent-title">
+              {{ upcomingEvent.nama_event }}
+            </h2>
+            <p class="urgent-subtitle">
+              {{ upcomingEvent.deskripsi }}
+            </p>
 
-          <div class="urgent-footer">
-            <div class="urgent-time">
-              <span class="time-label">TIME & LOCATION</span>
-              <span class="time-value">
-                {{ upcomingEvent.start_date ? new Date(upcomingEvent.start_date).toLocaleTimeString('id-ID', {hour: '2-digit', minute:'2-digit'}) : 'TBD' }} WIB • {{ upcomingEvent.location || 'TBA' }}
-              </span>
+            <div class="urgent-footer">
+              <div class="urgent-time">
+                <span class="time-label">TIME & LOCATION</span>
+                <span class="time-value">
+                  {{ upcomingEvent.start_date ? new Date(upcomingEvent.start_date).toLocaleTimeString('id-ID', {hour: '2-digit', minute:'2-digit'}) : 'TBD' }} WIB • {{ upcomingEvent.location || 'TBA' }}
+                </span>
+              </div>
+              <!-- Optionally hide register button since they are already registered -->
+              <!-- Or change it to 'View Details' -->
+              <ion-button 
+                class="register-btn" 
+                fill="solid" 
+                shape="round"
+                @click="router.push(`/event/${upcomingEvent.id}`)"
+              >
+                View<br />Details
+              </ion-button>
             </div>
-            <ion-button class="register-btn" fill="solid" shape="round">
-              Daftar<br />Sekarang
-            </ion-button>
-          </div>
+          </template>
+          
+          <template v-else>
+            <div style="text-align: center; color: white; padding: 24px 0;">
+              <h2 class="urgent-title" style="margin-bottom: 8px;">No upcoming events registered</h2>
+              <p class="urgent-subtitle" style="margin-bottom: 0;">Explore and register for available events in the Projects tab.</p>
+            </div>
+          </template>
         </div>
-        <div v-else-if="isLoading" class="urgent-card" style="padding: 24px; text-align: center;">
+        <div v-else class="urgent-card" style="padding: 40px; text-align: center; color: white;">
           Loading Event...
         </div>
 
@@ -47,7 +66,7 @@
             Loading news...
           </div>
           <div v-else>
-            <ion-card class="news-card" v-for="(news, index) in newsList" :key="index">
+            <ion-card class="news-card" v-for="(news, index) in newsList.slice(0, 7)" :key="news.id || index" button @click="router.push('/news/' + news.id)">
               <div class="news-card-content">
                 <ion-thumbnail class="news-thumbnail">
                   <img v-if="news.image_url" :src="news.image_url" alt="News Image" />
@@ -68,7 +87,7 @@
             </ion-card>
             
             <div v-if="newsList.length === 0" style="text-align: center; color: gray;">
-              Tidak ada berita terbaru.
+              No recent news.
             </div>
           </div>
           
@@ -86,33 +105,69 @@ import {
 } from "@ionic/vue";
 import CustomHeader from "@/components/CustomHeader.vue";
 import { calendarOutline } from "ionicons/icons";
-import { ref, onMounted } from "vue";
+import { ref } from "vue";
+import { onIonViewWillEnter } from "@ionic/vue";
+import { useRouter } from "vue-router";
 import { supabase } from "../supabase";
 
+const router = useRouter();
 const upcomingEvent = ref<any>(null);
 const newsList = ref<any[]>([]);
 const isLoading = ref(true);
+const additionalEventsCount = ref(0);
 
 const fetchDashboardData = async () => {
     isLoading.value = true;
     try {
-        // Fetch 1 Upcoming Event (Terdekat)
-        const { data: eventData, error: eventError } = await supabase
-            .from('events')
-            .select('*')
-            .eq('status', 'UPCOMING')
-            .order('start_date', { ascending: true })
-            .limit(1)
-            .single();
-            
-        if (!eventError && eventData) {
-            upcomingEvent.value = eventData;
+        const { data: { user } } = await supabase.auth.getUser();
+        if (user) {
+            const { data: participations, error: pError } = await supabase
+                .from('event_participants')
+                .select('event_id')
+                .eq('user_id', user.id)
+                .neq('status', 'CANCELLED');
+
+            if (!pError && participations && participations.length > 0) {
+                const eventIds = participations.map(p => p.event_id);
+                const { data: eventsData, error: eError } = await supabase
+                    .from('events')
+                    .select('*')
+                    .in('id', eventIds);
+
+                if (!eError && eventsData) {
+                    const now = new Date();
+                    // Filter events that haven't ended yet
+                    const futureEvents = eventsData.filter(e => {
+                        const eventDateStr = e.end_date || e.start_date;
+                        if (!eventDateStr) return false;
+                        return new Date(eventDateStr) >= now;
+                    });
+                    
+                    // Sort by start_date ascending (closest first)
+                    futureEvents.sort((a, b) => {
+                        const dateA = a.start_date ? new Date(a.start_date).getTime() : 0;
+                        const dateB = b.start_date ? new Date(b.start_date).getTime() : 0;
+                        return dateA - dateB;
+                    });
+
+                    if (futureEvents.length > 0) {
+                        upcomingEvent.value = futureEvents[0];
+                        additionalEventsCount.value = futureEvents.length - 1;
+                    } else {
+                        upcomingEvent.value = null;
+                        additionalEventsCount.value = 0;
+                    }
+                }
+            } else {
+                upcomingEvent.value = null;
+                additionalEventsCount.value = 0;
+            }
         }
 
         // Fetch News (Mengurutkan dari yang terbaru)
         const { data: newsData, error: newsError } = await supabase
             .from('news')
-            .select('title, content, image_url, created_at, category')
+            .select('id, title, content, image_url, created_at, category')
             .order('created_at', { ascending: false });
 
         if (!newsError && newsData) {
@@ -126,7 +181,7 @@ const fetchDashboardData = async () => {
     }
 };
 
-onMounted(() => {
+onIonViewWillEnter(() => {
     fetchDashboardData();
 });
 

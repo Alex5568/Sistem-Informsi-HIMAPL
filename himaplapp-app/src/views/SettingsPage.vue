@@ -48,19 +48,6 @@
           </ion-list>
         </div>
 
-        <!-- App Preferences -->
-        <div class="menu-group">
-          <h3 class="menu-group-title">App Preferences</h3>
-          <ion-list class="profile-list" lines="none">
-            <ion-item class="profile-item">
-              <div class="item-icon-box bg-gray" slot="start">
-                <ion-icon :icon="moonOutline" class="color-gray"></ion-icon>
-              </div>
-              <ion-label>Dark Mode</ion-label>
-              <ion-toggle slot="end" v-model="darkModeEnabled" @ionChange="toggleDarkMode"></ion-toggle>
-            </ion-item>
-          </ion-list>
-        </div>
 
         <!-- Privacy & Security -->
         <div class="menu-group">
@@ -81,7 +68,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue';
+import { ref, onMounted, watch } from 'vue';
 import {
   IonPage, IonHeader, IonToolbar, IonButtons, IonBackButton, IonTitle,
   IonContent, IonList, IonItem, IonLabel, IonIcon, IonToggle, toastController,
@@ -89,16 +76,28 @@ import {
 } from '@ionic/vue';
 import {
   lockClosedOutline, logoGoogle, chevronForwardOutline,
-  notificationsOutline, moonOutline, trashOutline
+  notificationsOutline, trashOutline
 } from 'ionicons/icons';
 import { supabase } from '../supabase';
+import { useRouter } from 'vue-router';
+
+const router = useRouter();
 
 const notificationsEnabled = ref(true);
-const darkModeEnabled = ref(false);
+
+watch(notificationsEnabled, (newValue) => {
+  localStorage.setItem('app_notifications_enabled', String(newValue));
+});
+
 const linkedGoogleEmail = ref<string | null>(null);
 const googleIdentity = ref<any>(null);
 
 onMounted(async () => {
+  const savedNotifs = localStorage.getItem('app_notifications_enabled');
+  if (savedNotifs !== null) {
+    notificationsEnabled.value = savedNotifs === 'true';
+  }
+
   const { data: { user } } = await supabase.auth.getUser();
   if (user && user.identities) {
     const identity = user.identities.find(id => id.provider === 'google');
@@ -187,35 +186,92 @@ const linkGoogleAccount = async () => {
   }
 };
 
-const toggleDarkMode = (event: any) => {
-  darkModeEnabled.value = event.detail.checked;
-  if (darkModeEnabled.value) {
-    document.body.classList.add('dark');
-  } else {
-    document.body.classList.remove('dark');
-  }
-};
 
 const handleDeleteAccount = async () => {
-  const toast = await toastController.create({
-    message: 'Are you sure you want to delete your account? This action cannot be undone.',
-    duration: 3000,
-    color: 'danger',
+  const alert = await alertController.create({
+    header: 'Delete Account',
+    message: 'Are you sure you want to delete your account? This action cannot be undone and will permanently remove your data.<br><br>Type <strong>DELETE ACCOUNT</strong> below to confirm deletion:',
+    inputs: [
+      {
+        name: 'confirmation',
+        type: 'text',
+        placeholder: 'DELETE ACCOUNT'
+      }
+    ],
     buttons: [
       {
         text: 'Cancel',
         role: 'cancel'
       },
       {
-        text: 'Delete',
+        text: 'Delete Permanently',
         role: 'confirm',
-        handler: () => {
-          console.log('Delete account confirmed');
+        handler: async (data) => {
+          if (data.confirmation !== 'DELETE ACCOUNT') {
+            const toast = await toastController.create({
+              message: 'Incorrect confirmation text. Deletion cancelled.',
+              duration: 3000,
+              color: 'warning'
+            });
+            await toast.present();
+            return false;
+          }
+
+          try {
+            // Hapus semua foto profil pengguna dari storage (jika ada) untuk menghemat penyimpanan
+            const { data: authData } = await supabase.auth.getUser();
+            if (authData?.user) {
+              const { data: files, error: listError } = await supabase.storage.from('avatars').list('', {
+                search: authData.user.id
+              });
+              
+              if (listError) {
+                console.error('Storage List Error (Mungkin karena RLS SELECT Policy):', listError);
+              }
+              
+              if (files && files.length > 0) {
+                const filesToRemove = files.map(f => f.name);
+                const { error: removeError } = await supabase.storage.from('avatars').remove(filesToRemove);
+                
+                if (removeError) {
+                  console.error('Storage Remove Error (Mungkin karena RLS DELETE Policy):', removeError);
+                } else {
+                  console.log('User avatars deleted:', filesToRemove);
+                }
+              }
+            }
+
+            // Memanggil RPC function untuk menghapus akun (dari database.types.ts)
+            const { error } = await supabase.rpc('delete_my_account');
+            
+            if (error) throw error;
+            
+            // Log out secara lokal setelah berhasil di server
+            await supabase.auth.signOut();
+            
+            const toast = await toastController.create({
+              message: 'Your account has been successfully deleted.',
+              duration: 3000,
+              color: 'success'
+            });
+            await toast.present();
+            
+            // Redirect ke halaman login
+            router.push('/login');
+          } catch (error: any) {
+            console.error("Failed to delete account:", error);
+            const toast = await toastController.create({
+              message: error.message || 'Failed to delete account. Try again later.',
+              duration: 3000,
+              color: 'danger'
+            });
+            await toast.present();
+          }
         }
       }
     ]
   });
-  await toast.present();
+  await alert.present();
 };
 </script>
 

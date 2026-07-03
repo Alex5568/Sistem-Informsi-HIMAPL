@@ -49,7 +49,7 @@
 
           <!-- LOGIN BUTTON -->
           <button class="primary-btn" @click="handleLogin" :disabled="isLoading">
-            {{ isLoading ? 'Memproses...' : 'Login' }} <ion-icon v-if="!isLoading" :icon="arrowForward" class="btn-icon"></ion-icon>
+            {{ isLoading ? 'Processing...' : 'Login' }} <ion-icon v-if="!isLoading" :icon="arrowForward" class="btn-icon"></ion-icon>
           </button>
 
           <!-- GOOGLE LOGIN BUTTON -->
@@ -89,6 +89,7 @@ import { useRouter } from "vue-router";
 import { supabase } from "../supabase";
 
 const router = useRouter();
+
 const showPassword = ref(false);
 const email = ref("");
 const password = ref("");
@@ -101,7 +102,7 @@ const togglePassword = () => {
 const handleLogin = async () => {
   if (!email.value || !password.value) {
     const toast = await toastController.create({
-      message: 'Email dan password tidak boleh kosong.',
+      message: 'Email and password cannot be empty.',
       duration: 2000,
       color: 'warning'
     });

@@ -1,6 +1,6 @@
 <template>
   <ion-page>
-    <CustomHeader title="HIMAPL Profil" />
+    <CustomHeader title="Profile" />
 
     <ion-content :fullscreen="true" class="app-background">
       <div class="profile-header-section">
@@ -15,7 +15,7 @@
 
       <div class="profile-content-section">
         <div class="menu-group">
-          <h3 class="menu-group-title">Account</h3>
+          <h3 class="app-section-title" style="margin-top: 24px;">Account</h3>
           <ion-list class="profile-list" lines="none">
             <ion-item button class="profile-item" :detail="false" @click="openEditModal">
               <div class="item-icon-box bg-blue" slot="start">
@@ -28,7 +28,7 @@
         </div>
 
         <div class="menu-group">
-          <h3 class="menu-group-title">General</h3>
+          <h3 class="app-section-title" style="margin-top: 24px;">General</h3>
           <ion-list class="profile-list" lines="none">
             <ion-item button class="profile-item" :detail="false" @click="router.push('/settings')">
               <div class="item-icon-box bg-gray" slot="start">
@@ -58,7 +58,7 @@
     <ion-modal :is-open="isEditModalOpen" @didDismiss="closeEditModal">
       <ion-header class="ion-no-border">
         <ion-toolbar>
-          <ion-title>Edit Profile</ion-title>
+          <ion-title class="header-title">Edit Profile</ion-title>
           <ion-buttons slot="end">
             <ion-button @click="closeEditModal">Back</ion-button>
           </ion-buttons>
@@ -239,10 +239,32 @@ const fetchUserProfile = async () => {
             .single();
             
         if (publicError) {
-            console.error("Public User Fetch Error:", publicError);
-            showToast("Data profil tidak ditemukan di database", "danger");
+            console.warn("Public User Fetch Error, attempting auto-create:", publicError);
+            
+            // Auto-create user profile if it doesn't exist
+            const newUserData = {
+               id: authData.user.id,
+               nama: authData.user.user_metadata?.full_name || authData.user.email?.split('@')[0] || 'User',
+               email: authData.user.email || '',
+               avatar_url: authData.user.user_metadata?.avatar_url || ''
+            };
+            
+            const { data: insertedUser, error: insertError } = await supabase
+                .from('users')
+                .insert([newUserData])
+                .select()
+                .single();
+                
+            if (insertError) {
+                console.error("Auto-create Error:", insertError);
+                showToast("Profile data not found in database and failed to create", "danger");
+            } else {
+                console.log("Successfully created profile automatically:", insertedUser);
+                userData.value = insertedUser;
+                showToast("Profile successfully created from Google Sign In!", "success");
+            }
         } else {
-            console.log("Data dari Supabase:", publicUser);
+            console.log("Data from Supabase:", publicUser);
             userData.value = publicUser;
         }
     } catch (e: any) {

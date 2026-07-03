@@ -156,15 +156,15 @@ const handleRegister = async () => {
 
     // Deteksi email duplikat
     if (data.user && data.user.identities && data.user.identities.length === 0) {
-      showToast("Email ini sudah digunakan. Silakan gunakan email lain atau Login.", "danger");
+      showToast("This email is already in use. Please use a different email or Login.", "danger");
       return; // Hentikan eksekusi lebih lanjut
     }
 
-    showToast("Registrasi berhasil! Silakan cek email untuk verifikasi.", "success");
+    showToast("Registration successful! Please check your email for verification.", "success");
     router.push("/login");
 
   } catch (error: any) {
-    showToast(error.message || "Gagal melakukan registrasi.", "danger");
+    showToast(error.message || "Failed to register.", "danger");
   } finally {
     isLoading.value = false;
   }
