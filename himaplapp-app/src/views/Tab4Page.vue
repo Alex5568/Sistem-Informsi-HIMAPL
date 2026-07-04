@@ -3,6 +3,7 @@
     <CustomHeader title="Profile" />
 
     <ion-content :fullscreen="true" class="app-background">
+      <PullToRefresh @refresh="handleRefresh" />
       <div class="profile-header-section">
         <ion-avatar class="profile-avatar">
           <img :src="userData?.avatar_url || 'https://ionicframework.com/docs/img/demos/avatar.svg'" alt="Profile Avatar" />
@@ -109,6 +110,7 @@ import {
   helpCircleOutline, logOutOutline, chevronForwardOutline
 } from 'ionicons/icons';
 import CustomHeader from "@/components/CustomHeader.vue";
+import PullToRefresh from "@/components/PullToRefresh.vue";
 import { supabase } from "../supabase";
 import { useRouter } from 'vue-router';
 import imageCompression from 'browser-image-compression';
@@ -116,6 +118,11 @@ import imageCompression from 'browser-image-compression';
 const userData = ref<any>(null);
 const isLoading = ref(true);
 const router = useRouter();
+
+const handleRefresh = async (event: any) => {
+  await fetchUserProfile();
+  event.target.complete();
+};
 
 const isEditModalOpen = ref(false);
 const isSaving = ref(false);

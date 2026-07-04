@@ -3,6 +3,7 @@
     <CustomHeader title="HIMAPL" />
 
     <ion-content class="app-background">
+      <PullToRefresh @refresh="handleRefresh" />
       <div class="ion-padding">
         
         <div class="urgent-card" v-if="!isLoading">
@@ -104,6 +105,7 @@ import {
   IonMenuButton
 } from "@ionic/vue";
 import CustomHeader from "@/components/CustomHeader.vue";
+import PullToRefresh from "@/components/PullToRefresh.vue";
 import { calendarOutline } from "ionicons/icons";
 import { ref } from "vue";
 import { onIonViewWillEnter } from "@ionic/vue";
@@ -115,6 +117,11 @@ const upcomingEvent = ref<any>(null);
 const newsList = ref<any[]>([]);
 const isLoading = ref(true);
 const additionalEventsCount = ref(0);
+
+const handleRefresh = async (event: any) => {
+  await fetchDashboardData();
+  event.target.complete();
+};
 
 const fetchDashboardData = async () => {
     isLoading.value = true;

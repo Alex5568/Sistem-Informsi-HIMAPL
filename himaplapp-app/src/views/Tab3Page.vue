@@ -3,6 +3,7 @@
     <CustomHeader title="Notifications" />
 
     <ion-content class="app-background">
+      <PullToRefresh @refresh="handleRefresh" />
       <div class="notification-container">
         <h2 class="app-section-title" style="margin-top: 24px;">Recent</h2>
         
@@ -54,6 +55,7 @@ import { IonPage, IonContent, IonIcon, IonSpinner, onIonViewWillEnter, IonInfini
 import { useRouter } from 'vue-router';
 import { notificationsOutline } from 'ionicons/icons';
 import CustomHeader from "@/components/CustomHeader.vue";
+import PullToRefresh from "@/components/PullToRefresh.vue";
 import { supabase } from "../supabase";
 
 const router = useRouter();
@@ -61,6 +63,10 @@ const notifications = ref<any[]>([]);
 const isLoading = ref(true);
 const page = ref(0);
 const pageSize = 8;
+
+const handleRefresh = (event: any) => {
+  fetchNotifications(true, event);
+};
 
 const fetchNotifications = async (isFirstLoad = true, event?: any) => {
   if (isFirstLoad) {

@@ -196,14 +196,35 @@ const isDosen = computed(() => {
 const fetchUserProfile = async (user: any) => {
   if (user) {
     userEmail.value = user.email || '';
-    const { data } = await supabase
-      .from('users')
-      .select('nama, role')
-      .eq('id', user.id)
-      .single();
-    if (data) {
-      userName.value = data.nama;
-      userRole.value = data.role || '';
+    
+    try {
+      const { data, error } = await supabase
+        .from('users')
+        .select('nama, role')
+        .eq('id', user.id)
+        .single();
+        
+      if (data) {
+        userName.value = data.nama;
+        userRole.value = data.role || '';
+      } else {
+        // Fallback jika belum ada di tabel users (misal: login Google pertama kali)
+        userName.value = user.user_metadata?.full_name || user.user_metadata?.name || 'Google User';
+        userRole.value = '';
+        
+        // (Opsional) Jika Anda ingin insert otomatis ke tabel users, bisa ditambahkan di sini
+        /* 
+        await supabase.from('users').insert([{ 
+          id: user.id, 
+          email: user.email, 
+          nama: userName.value, 
+          role: 'Mahasiswa' 
+        }]); 
+        */
+      }
+    } catch (err) {
+      console.error("Fetch profile error:", err);
+      userName.value = user.user_metadata?.full_name || 'Google User';
     }
   } else {
     userName.value = 'Guest';
@@ -221,14 +242,36 @@ onMounted(() => {
     fetchUserProfile(session?.user);
   });
 
-  CapacitorApp.addListener('appUrlOpen', (event) => {
+  CapacitorApp.addListener('appUrlOpen', async (event) => {
     // Jika URL yang masuk mengenali skema aplikasi kita
     if (event.url.startsWith('himaplapp://')) {
-      // Ubah himaplapp:// menjadi struktur URL path normal yang dimengerti router
-      const pathAndHash = event.url.replace('himaplapp://', '/');
+      // Ekstrak access_token dan refresh_token dari URL hash
+      // Format url dari Supabase: himaplapp://tabs/home#access_token=...&refresh_token=...
+      const urlString = event.url.replace('himaplapp://', 'http://localhost/');
+      const url = new URL(urlString);
+      const hashParams = new URLSearchParams(url.hash.substring(1));
       
-      // Paksa router Vue untuk memproses URL beserta token di dalamnya
-      router.push(pathAndHash);
+      const accessToken = hashParams.get('access_token');
+      const refreshToken = hashParams.get('refresh_token');
+
+      // Jika ada token, set sesi secara manual ke Supabase
+      // Ini sangat penting karena Vue Router push tidak memicu event hashchange yang ditunggu oleh Supabase
+      if (accessToken && refreshToken) {
+        const { error } = await supabase.auth.setSession({
+          access_token: accessToken,
+          refresh_token: refreshToken
+        });
+        
+        if (error) {
+          console.error("Gagal set session:", error);
+        }
+      }
+
+      // Ubah himaplapp:// menjadi struktur URL path normal yang dimengerti router (tanpa hash panjang agar URL bersih)
+      const pathOnly = url.pathname;
+      
+      // Lanjutkan navigasi router Vue
+      router.push(pathOnly);
     }
   });
 });

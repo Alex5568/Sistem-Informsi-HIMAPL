@@ -118,11 +118,16 @@ const router = createRouter({
 // Add global route guard
 router.beforeEach(async (to, from, next) => {
   // Check if we are handling an OAuth redirect error
-  const hashParams = new URLSearchParams(window.location.hash.substring(1));
+  const hashParams = new URLSearchParams(to.hash.substring(1) || window.location.hash.substring(1));
   if (hashParams.has('error_description')) {
     const errorMsg = hashParams.get('error_description');
     console.error('OAuth Error:', errorMsg);
-    // Let it proceed to login page, where we could potentially show this error
+  }
+
+  // Jika ada token dari Supabase di URL hash, izinkan routing berjalan 
+  // agar Supabase dapat memproses token tersebut.
+  if (to.hash && (to.hash.includes('access_token') || to.hash.includes('refresh_token'))) {
+    return next();
   }
 
   // Import supabase inside the guard to avoid circular dependencies if any

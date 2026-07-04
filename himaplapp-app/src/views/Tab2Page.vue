@@ -3,6 +3,7 @@
     <CustomHeader title="Events" />
 
     <ion-content :fullscreen="true" class="app-background">
+      <PullToRefresh @refresh="handleRefresh" />
       <div class="ion-padding">
 
         <ion-segment v-model="selectedTab" class="custom-segment" mode="ios">
@@ -118,6 +119,7 @@ import { IonPage, IonContent, IonSegment, IonSegmentButton, IonLabel,
   IonCard, IonBadge, IonThumbnail 
 } from '@ionic/vue';
 import CustomHeader from "@/components/CustomHeader.vue";
+import PullToRefresh from "@/components/PullToRefresh.vue";
 
 import { ref, computed } from "vue";
 import { onIonViewWillEnter } from "@ionic/vue";
@@ -129,6 +131,11 @@ const selectedTab = ref("tersedia");
 const events = ref<any[]>([]);
 const userParticipations = ref<any[]>([]);
 const isLoading = ref(true);
+
+const handleRefresh = async (event: any) => {
+  await fetchEvents();
+  event.target.complete();
+};
 
 const fetchEvents = async () => {
   isLoading.value = true;
