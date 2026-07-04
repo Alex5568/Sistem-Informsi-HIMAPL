@@ -135,7 +135,8 @@ const handleGoogleLogin = async () => {
   const { error } = await supabase.auth.signInWithOAuth({
     provider: 'google',
     options: {
-      redirectTo: window.location.origin + '/tabs/home'
+      // Gunakan himaplapp:// untuk APK
+      redirectTo: 'himaplapp://tabs/home'
     }
   });
   

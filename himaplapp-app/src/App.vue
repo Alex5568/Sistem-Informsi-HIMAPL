@@ -82,6 +82,7 @@ import {
 import { ref, computed, onMounted } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
 import { supabase } from './supabase';
+import { App as CapacitorApp } from '@capacitor/app';
 import {
   homeOutline, homeSharp,
   calendarOutline, calendarSharp,
@@ -218,6 +219,17 @@ onMounted(() => {
 
   supabase.auth.onAuthStateChange((_event, session) => {
     fetchUserProfile(session?.user);
+  });
+
+  CapacitorApp.addListener('appUrlOpen', (event) => {
+    // Jika URL yang masuk mengenali skema aplikasi kita
+    if (event.url.startsWith('himaplapp://')) {
+      // Ubah himaplapp:// menjadi struktur URL path normal yang dimengerti router
+      const pathAndHash = event.url.replace('himaplapp://', '/');
+      
+      // Paksa router Vue untuk memproses URL beserta token di dalamnya
+      router.push(pathAndHash);
+    }
   });
 });
 </script>
