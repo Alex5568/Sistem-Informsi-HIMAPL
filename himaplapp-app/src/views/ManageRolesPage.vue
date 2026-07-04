@@ -33,8 +33,8 @@
               <img :src="user.avatar_url || 'https://ionicframework.com/docs/img/demos/avatar.svg'" />
             </ion-avatar>
             <ion-label>
-              <h2>{{ user.nama }} <span v-if="user.nim">({{ user.nim }})</span></h2>
-              <p>{{ user.email }}</p>
+              <h2>{{ user.nama }}</h2>
+              <p v-if="user.nim">{{ user.nim }}</p>
               <p class="division-text" v-if="user.divisi">Divisi: {{ user.divisi.nama_divisi }}</p>
             </ion-label>
             <ion-badge :color="getRoleBadgeColor(user.displayRole)" slot="end">{{ user.displayRole }}</ion-badge>
@@ -78,8 +78,8 @@
         </ion-header>
         <ion-content class="ion-padding" v-if="selectedUser">
           <div class="modal-user-info">
-            <h2>{{ selectedUser.nama }} <span v-if="selectedUser.nim">({{ selectedUser.nim }})</span></h2>
-            <p>{{ selectedUser.email }}</p>
+            <h2>{{ selectedUser.nama }}</h2>
+            <p v-if="selectedUser.nim">{{ selectedUser.nim }}</p>
             <p>Current Role: <strong>{{ selectedUser.displayRole }}</strong></p>
           </div>
 
