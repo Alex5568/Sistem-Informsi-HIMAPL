@@ -44,15 +44,15 @@
                       </ion-thumbnail>
                       <div class="news-info">
                         <div class="news-meta">
-                          <div class="badge-group" v-if="event.kategori && event.kategori.length > 0">
+                          <div class="badge-group" v-if="event.event_kategori_mapping && event.event_kategori_mapping.length > 0">
                             <ion-badge 
                               class="badge-blue" 
-                              v-for="(cat, index) in event.kategori.slice(0, 3)" 
+                              v-for="(mapping, index) in event.event_kategori_mapping.slice(0, 3)" 
                               :key="index"
                             >
-                              {{ cat }}
+                              {{ mapping.kategori_event?.nama_kategori }}
                             </ion-badge>
-                            <ion-badge class="badge-blue" v-if="event.kategori.length > 3">...</ion-badge>
+                            <ion-badge class="badge-blue" v-if="event.event_kategori_mapping.length > 3">...</ion-badge>
                           </div>
                           <span class="news-time" style="margin-left: auto;">{{ formatDate(event.start_date) }}</span>
                         </div>
@@ -87,15 +87,15 @@
                 </ion-thumbnail>
                 <div class="news-info">
                   <div class="news-meta">
-                    <div class="badge-group" v-if="event.kategori && event.kategori.length > 0">
+                    <div class="badge-group" v-if="event.event_kategori_mapping && event.event_kategori_mapping.length > 0">
                       <ion-badge 
                         class="badge-blue" 
-                        v-for="(cat, index) in event.kategori.slice(0, 3)" 
+                        v-for="(mapping, index) in event.event_kategori_mapping.slice(0, 3)" 
                         :key="index"
                       >
-                        {{ cat }}
+                        {{ mapping.kategori_event?.nama_kategori }}
                       </ion-badge>
-                      <ion-badge class="badge-blue" v-if="event.kategori.length > 3">...</ion-badge>
+                      <ion-badge class="badge-blue" v-if="event.event_kategori_mapping.length > 3">...</ion-badge>
                     </div>
                     <span class="news-time" style="margin-left: auto;">{{ formatDate(event.start_date) }}</span>
                   </div>
@@ -146,7 +146,7 @@ const fetchEvents = async () => {
     // 2. Ambil data events yang bukan draft/cancelled
     const { data: eventsData, error: eventsError } = await supabase
       .from('events')
-      .select('*')
+      .select('*, event_kategori_mapping(kategori_event(nama_kategori))')
       .in('status', ['PUBLISHED', 'AVAILABLE', 'UPCOMING', 'COMPLETED']) // Mengecualikan DRAFT, CANCELLED, CLOSED
       .order('start_date', { ascending: true });
     

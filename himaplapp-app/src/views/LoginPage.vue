@@ -26,7 +26,7 @@
           <div class="input-group">
             <div class="label-row">
               <label class="input-label">PASSWORD</label>
-              <a href="#" class="forgot-link">FORGOT?</a>
+              <a href="#" class="forgot-link" @click.prevent="handleForgotPassword">FORGOT?</a>
             </div>
             <div class="input-wrapper">
               <ion-icon
@@ -76,7 +76,7 @@
 
 <script setup lang="ts">
 import { ref } from "vue";
-import { IonPage, IonContent, IonIcon, toastController } from "@ionic/vue";
+import { IonPage, IonContent, IonIcon, toastController, alertController } from "@ionic/vue";
 import {
   atOutline,
   lockClosedOutline,
@@ -97,6 +97,57 @@ const isLoading = ref(false);
 
 const togglePassword = () => {
   showPassword.value = !showPassword.value;
+};
+
+const handleForgotPassword = async () => {
+  const alert = await alertController.create({
+    header: 'Reset Password',
+    message: 'Enter your email address to receive a password reset link.',
+    inputs: [
+      {
+        name: 'email',
+        type: 'email',
+        placeholder: 'username@example.com',
+        value: email.value // Pre-fill if already typed
+      }
+    ],
+    buttons: [
+      {
+        text: 'Cancel',
+        role: 'cancel'
+      },
+      {
+        text: 'Send Link',
+        handler: async (data) => {
+          if (!data.email) {
+            const toast = await toastController.create({ message: 'Email is required', duration: 2000, color: 'danger' });
+            toast.present();
+            return false;
+          }
+          
+          try {
+            // Check if native to set the correct redirect
+            const isNative = typeof window !== 'undefined' && (window as any).Capacitor?.isNative;
+            const redirectUrl = isNative ? 'himaplapp://update-password' : window.location.origin + '/update-password';
+            
+            const { error } = await supabase.auth.resetPasswordForEmail(data.email, {
+              redirectTo: redirectUrl
+            });
+            
+            if (error) throw error;
+            
+            const toast = await toastController.create({ message: 'Password reset link sent to your email', duration: 3000, color: 'success' });
+            toast.present();
+          } catch (e: any) {
+            const toast = await toastController.create({ message: e.message || 'Failed to send reset link', duration: 3000, color: 'danger' });
+            toast.present();
+          }
+        }
+      }
+    ]
+  });
+  
+  await alert.present();
 };
 
 const handleLogin = async () => {
@@ -132,11 +183,15 @@ const handleLogin = async () => {
 };
 
 const handleGoogleLogin = async () => {
+  // Deteksi apakah sedang berjalan di Android/iOS (Native) atau Web Browser
+  const isNative = (window as any).Capacitor?.isNativePlatform?.();
+  
   const { error } = await supabase.auth.signInWithOAuth({
     provider: 'google',
     options: {
-      // Gunakan himaplapp:// untuk APK
-      redirectTo: 'himaplapp://tabs/home'
+      redirectTo: isNative 
+        ? 'himaplapp://tabs/home' 
+        : window.location.origin + '/tabs/home'
     }
   });
   

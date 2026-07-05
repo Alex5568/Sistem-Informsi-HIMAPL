@@ -30,7 +30,7 @@
               <div class="urgent-time">
                 <span class="time-label">TIME & LOCATION</span>
                 <span class="time-value">
-                  {{ upcomingEvent.start_date ? new Date(upcomingEvent.start_date).toLocaleTimeString('id-ID', {hour: '2-digit', minute:'2-digit'}) : 'TBD' }} WIB • {{ upcomingEvent.location || 'TBA' }}
+                  {{ upcomingEvent.start_date ? new Date(upcomingEvent.start_date).toLocaleTimeString('id-ID', {hour: '2-digit', minute:'2-digit'}) : 'TBD' }} WIB • {{ upcomingEvent.lokasi?.nama_ruangan || 'TBA' }}
                 </span>
               </div>
               <!-- Optionally hide register button since they are already registered -->
@@ -138,7 +138,7 @@ const fetchDashboardData = async () => {
                 const eventIds = participations.map(p => p.event_id);
                 const { data: eventsData, error: eError } = await supabase
                     .from('events')
-                    .select('*')
+                    .select('*, lokasi(nama_ruangan)')
                     .in('id', eventIds);
 
                 if (!eError && eventsData) {
@@ -169,6 +169,9 @@ const fetchDashboardData = async () => {
                 upcomingEvent.value = null;
                 additionalEventsCount.value = 0;
             }
+        } else {
+            upcomingEvent.value = null;
+            additionalEventsCount.value = 0;
         }
 
         // Fetch News (Mengurutkan dari yang terbaru)

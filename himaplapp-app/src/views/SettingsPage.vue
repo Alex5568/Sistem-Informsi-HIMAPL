@@ -16,7 +16,7 @@
         <div class="menu-group">
           <h3 class="menu-group-title">Account Settings</h3>
           <ion-list class="profile-list" lines="none">
-            <ion-item button class="profile-item" :detail="false">
+            <ion-item button class="profile-item" :detail="false" @click="handleChangePassword">
               <div class="item-icon-box bg-orange" slot="start">
                 <ion-icon :icon="lockClosedOutline" class="color-orange"></ion-icon>
               </div>
@@ -148,6 +148,103 @@ const handleGoogleAccountClick = async () => {
   });
   
   await alert.present();
+};
+
+const handleChangePassword = async () => {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return;
+
+  const isGoogleOnly = user.app_metadata?.providers?.includes('google') && !user.app_metadata?.providers?.includes('email');
+  
+  if (isGoogleOnly) {
+    const alert = await alertController.create({
+      header: 'Set App Password',
+      message: 'You logged in using Google. Do you want to set an app password?',
+      buttons: [
+        { text: 'Cancel', role: 'cancel' },
+        { text: 'Continue', handler: () => { router.push('/update-password'); } }
+      ]
+    });
+    await alert.present();
+    return;
+  }
+
+  const alert = await alertController.create({
+    header: 'Confirm Password',
+    message: 'Please enter your current password to continue.',
+    inputs: [
+      {
+        name: 'oldPassword',
+        type: 'password',
+        placeholder: 'Current Password',
+      }
+    ],
+    buttons: [
+      {
+        text: 'Forgot Password?',
+        handler: async () => {
+          if (user.email) {
+            try {
+              const isNative = typeof window !== 'undefined' && (window as any).Capacitor?.isNative;
+              const redirectUrl = isNative ? 'himaplapp://update-password' : window.location.origin + '/update-password';
+              
+              const { error } = await supabase.auth.resetPasswordForEmail(user.email, {
+                redirectTo: redirectUrl
+              });
+              
+              if (error) throw error;
+              showToast('Password reset link sent to your email', 'success');
+            } catch (e: any) {
+              showToast(e.message || 'Failed to send reset link', 'danger');
+            }
+          }
+        }
+      },
+      {
+        text: 'Cancel',
+        role: 'cancel'
+      },
+      {
+        text: 'Confirm',
+        handler: async (data) => {
+          if (!data.oldPassword) {
+            showToast('Current password is required', 'danger');
+            return false;
+          }
+
+          try {
+            if (user.email) {
+              const { error: signInError } = await supabase.auth.signInWithPassword({
+                email: user.email,
+                password: data.oldPassword
+              });
+              
+              if (signInError) {
+                showToast('Incorrect current password', 'danger');
+                return false;
+              }
+            }
+            // Password correct! Navigate to update password page
+            router.push('/update-password');
+          } catch (e: any) {
+            showToast(e.message || 'Failed to verify password', 'danger');
+            return false;
+          }
+        }
+      }
+    ]
+  });
+
+  await alert.present();
+};
+
+const showToast = async (msg: string, color: string) => {
+  const toast = await toastController.create({
+    message: msg,
+    duration: 3000,
+    color
+  });
+  toast.present();
 };
 
 const linkGoogleAccount = async () => {

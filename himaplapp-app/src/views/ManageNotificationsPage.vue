@@ -15,8 +15,9 @@
               <ion-label>
                 <h2 style="font-weight: 600;">{{ notif.judul }}</h2>
                 <p>
-                  <span v-if="notif.user_id">👤 To: {{ getUserName(notif.user_id) }}</span>
-                  <span v-else>🌍 Global (Everyone)</span>
+                  <span v-if="notif.tipe === 'PERSONAL'">👤 Personal</span>
+                  <span v-else-if="notif.tipe === 'GROUP'">👥 Group</span>
+                  <span v-else>🌍 Global</span>
                   • {{ new Date(notif.created_at).toLocaleDateString() }}
                 </p>
               </ion-label>
@@ -57,14 +58,19 @@
             </ion-item>
             
             <ion-item>
-              <ion-select label="Assign To" label-placement="floating" v-model="newNotif.assign_type" @ionChange="newNotif.user_id = null">
-                <ion-select-option value="global">Global (Everyone)</ion-select-option>
-                <ion-select-option value="individu">Specific Person</ion-select-option>
+              <ion-select label="Assign To" label-placement="floating" v-model="newNotif.assign_type" @ionChange="newNotif.user_ids = []; newNotif.divisi_id = null;">
+                <ion-select-option value="GLOBAL">Global (Everyone)</ion-select-option>
+                <ion-select-option value="PERSONAL">Specific Person</ion-select-option>
+                <ion-select-option value="GROUP">Specific Group/Divisi</ion-select-option>
               </ion-select>
             </ion-item>
 
-            <ion-item v-if="newNotif.assign_type === 'individu'" button @click="isUserSelectModalOpen = true">
-              <ion-input label="Select Person" label-placement="floating" readonly :value="selectedUserName" placeholder="Click to select a person"></ion-input>
+            <ion-item v-if="newNotif.assign_type === 'PERSONAL'" button @click="isUserSelectModalOpen = true">
+              <ion-input label="Select Persons" label-placement="floating" readonly :value="selectedUserName" placeholder="Click to select persons"></ion-input>
+            </ion-item>
+
+            <ion-item v-if="newNotif.assign_type === 'GROUP'">
+              <ion-input label="Divisi ID" label-placement="floating" type="number" v-model.number="newNotif.divisi_id" placeholder="Enter Divisi ID"></ion-input>
             </ion-item>
           
             <ion-item>
@@ -93,12 +99,12 @@
         </ion-header>
         <ion-content>
           <ion-list>
-            <ion-item v-for="u in filteredUsers" :key="u.id" button @click="selectUser(u.id)">
+            <ion-item v-for="u in filteredUsers" :key="u.id">
+              <ion-checkbox slot="start" :checked="newNotif.user_ids.includes(u.id)" @ionChange="toggleUserSelection(u.id, $event)"></ion-checkbox>
               <ion-label>
                 <h2>{{ u.nama }}</h2>
                 <p v-if="u.nim">{{ u.nim }}</p>
               </ion-label>
-              <ion-icon v-if="newNotif.user_id === u.id" slot="end" name="checkmark-outline" color="primary"></ion-icon>
             </ion-item>
             <ion-item v-if="filteredUsers.length === 0">
               <ion-label class="ion-text-center" color="medium">No users found</ion-label>
@@ -115,7 +121,7 @@
 import { 
   IonPage, IonContent, IonButton, 
   IonAccordionGroup, IonAccordion, IonItem, IonLabel, IonIcon, toastController, alertController,
-  IonModal, IonHeader, IonToolbar, IonTitle, IonButtons, IonList, IonInput, IonTextarea, IonSelect, IonSelectOption, IonSearchbar
+  IonModal, IonHeader, IonToolbar, IonTitle, IonButtons, IonList, IonInput, IonTextarea, IonSelect, IonSelectOption, IonSearchbar, IonCheckbox
 } from '@ionic/vue';
 import { createOutline, trashOutline } from 'ionicons/icons';
 import { ref, onMounted, computed } from 'vue';
@@ -132,8 +138,9 @@ const editingNotifId = ref<number | null>(null);
 const newNotif = ref({
   judul: '',
   pesan: '',
-  assign_type: 'global',
-  user_id: null as string | null
+  assign_type: 'GLOBAL',
+  user_ids: [] as string[],
+  divisi_id: null as number | null
 });
 
 const isUserSelectModalOpen = ref(false);
@@ -149,14 +156,21 @@ const filteredUsers = computed(() => {
 });
 
 const selectedUserName = computed(() => {
-  if (!newNotif.value.user_id) return '';
-  const u = usersList.value.find(user => user.id === newNotif.value.user_id);
-  return u ? (u.nim ? `${u.nama} (${u.nim})` : u.nama) : '';
+  if (newNotif.value.user_ids.length === 0) return '';
+  if (newNotif.value.user_ids.length === 1) {
+    const u = usersList.value.find(user => user.id === newNotif.value.user_ids[0]);
+    return u ? (u.nim ? `${u.nama} (${u.nim})` : u.nama) : '';
+  }
+  return `${newNotif.value.user_ids.length} persons selected`;
 });
 
-const selectUser = (id: string) => {
-  newNotif.value.user_id = id;
-  isUserSelectModalOpen.value = false;
+const toggleUserSelection = (id: string, event: any) => {
+  const isChecked = event.detail.checked;
+  if (isChecked && !newNotif.value.user_ids.includes(id)) {
+    newNotif.value.user_ids.push(id);
+  } else if (!isChecked) {
+    newNotif.value.user_ids = newNotif.value.user_ids.filter(uid => uid !== id);
+  }
 };
 
 const showToast = async (msg: string, color: string) => {
@@ -201,8 +215,9 @@ const createNotif = () => {
   newNotif.value = {
     judul: '',
     pesan: '',
-    assign_type: 'global',
-    user_id: null
+    assign_type: 'GLOBAL',
+    user_ids: [],
+    divisi_id: null
   };
   isCreateModalOpen.value = true;
 };
@@ -216,33 +231,65 @@ const saveNotif = async () => {
     showToast('Message is required', 'warning');
     return;
   }
-  if (newNotif.value.assign_type === 'individu' && !newNotif.value.user_id) {
-    showToast('Please select a person', 'warning');
+  if (newNotif.value.assign_type === 'PERSONAL' && newNotif.value.user_ids.length === 0) {
+    showToast('Please select at least one person', 'warning');
     return;
   }
 
   isSaving.value = true;
   try {
+    const { data: authData } = await supabase.auth.getUser();
+    const senderId = authData?.user?.id || null;
+
     const payload = {
       judul: newNotif.value.judul,
       pesan: newNotif.value.pesan,
-      user_id: newNotif.value.assign_type === 'individu' ? newNotif.value.user_id : null
+      tipe: newNotif.value.assign_type as "GLOBAL" | "PERSONAL" | "GROUP",
+      sender_id: senderId
     };
 
     if (isEditing.value && editingNotifId.value) {
+      // For editing, just update the notification details
       const { error: updateError } = await supabase
         .from('notifikasi')
-        .update(payload)
+        .update({ judul: payload.judul, pesan: payload.pesan })
         .eq('id', editingNotifId.value);
         
       if (updateError) throw updateError;
       showToast('Notification updated successfully', 'success');
     } else {
-      const { error: insertError } = await supabase
+      const { data: insertedNotif, error: insertError } = await supabase
         .from('notifikasi')
-        .insert([payload]);
+        .insert([payload])
+        .select()
+        .single();
         
       if (insertError) throw insertError;
+      
+      const notifId = insertedNotif.id;
+      let targetUserIds: string[] = [];
+
+      if (newNotif.value.assign_type === 'GLOBAL') {
+        const { data: allUsers } = await supabase.from('users').select('id');
+        if (allUsers) targetUserIds = allUsers.map((u: any) => u.id);
+      } else if (newNotif.value.assign_type === 'PERSONAL') {
+        if (newNotif.value.user_ids.length > 0) targetUserIds.push(...newNotif.value.user_ids);
+      } else if (newNotif.value.assign_type === 'GROUP') {
+        if (newNotif.value.divisi_id) {
+           const { data: groupUsers } = await supabase.from('users').select('id').eq('divisi_id', newNotif.value.divisi_id);
+           if (groupUsers) targetUserIds = groupUsers.map((u: any) => u.id);
+        }
+      }
+
+      if (targetUserIds.length > 0) {
+        const pivotPayload = targetUserIds.map(uid => ({
+          notif_id: notifId,
+          user_id: uid,
+          is_read: false
+        }));
+        await supabase.from('penerima_notifikasi').insert(pivotPayload);
+      }
+
       showToast('Notification created successfully', 'success');
     }
     
@@ -262,8 +309,9 @@ const editNotif = (notif: any) => {
   newNotif.value = {
     judul: notif.judul,
     pesan: notif.pesan || '',
-    assign_type: notif.user_id ? 'individu' : 'global',
-    user_id: notif.user_id || null
+    assign_type: notif.tipe || 'GLOBAL',
+    user_ids: [],
+    divisi_id: null
   };
   isCreateModalOpen.value = true;
 };

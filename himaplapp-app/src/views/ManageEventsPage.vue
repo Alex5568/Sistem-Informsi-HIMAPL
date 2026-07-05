@@ -13,8 +13,8 @@
           <ion-accordion v-for="event in events" :key="event.id" :value="String(event.id)">
             <ion-item slot="header" color="light">
               <ion-label>
-                <h2>ID: {{ event.id }}</h2>
-                <p>{{ event.nama_event }}</p>
+                <h2 style="font-weight: 600;">{{ event.nama_event }}</h2>
+                <p>ID: {{ event.id }} <span v-if="event.start_date"> • {{ new Date(event.start_date).toLocaleDateString('id-ID') }} - {{ event.end_date ? new Date(event.end_date).toLocaleDateString('id-ID') : 'TBA' }}</span></p>
               </ion-label>
             </ion-item>
             
@@ -98,8 +98,8 @@
               </ion-modal>
             </ion-item>
 
-            <ion-item>
-              <ion-input type="text" label="Location" label-placement="floating" v-model="newEvent.location" placeholder="Enter location"></ion-input>
+            <ion-item button @click="isLokasiModalOpen = true">
+              <ion-input label="Location" label-placement="floating" readonly :value="selectedLokasiText" placeholder="Click to select location"></ion-input>
             </ion-item>
 
             <ion-item>
@@ -107,20 +107,24 @@
             </ion-item>
 
             <ion-item>
-              <ion-select label="Category" label-placement="floating" :multiple="true" v-model="newEvent.kategori">
-                <ion-select-option value="Seminar">Seminar</ion-select-option>
-                <ion-select-option value="Certificate">Certificate</ion-select-option>
-                <ion-select-option value="Workshop">Workshop</ion-select-option>
-                <ion-select-option value="Industrial Visit">Industrial Visit</ion-select-option>
-                <ion-select-option value="Course">Course</ion-select-option>
-                <ion-select-option value="Project">Project</ion-select-option>
-                <ion-select-option value="Celebration">Celebration</ion-select-option>
-                <ion-select-option value="Free">Free</ion-select-option>
-                <ion-select-option value="Paid">Paid</ion-select-option>
-                <ion-select-option value="Limited">Limited</ion-select-option>
-                <ion-select-option value="Meeting">Meeting</ion-select-option>
+              <ion-select label="Category" label-placement="floating" :multiple="true" v-model="newEvent.kategori_ids">
+                <ion-select-option v-for="k in kategoriList" :key="k.id" :value="k.id">{{ k.nama_kategori }}</ion-select-option>
               </ion-select>
             </ion-item>
+
+            <div style="margin: 16px 0; border: 1px solid #e2e8f0; border-radius: 8px; padding-bottom: 8px;">
+              <h3 style="margin: 16px; font-size: 14px; color: #64748b; font-weight: 600;">Event Links (Optional)</h3>
+              <ion-list lines="none">
+                <ion-item v-for="(link, idx) in eventLinks" :key="idx" style="--padding-start: 16px; --inner-padding-end: 16px; border-bottom: 1px solid #f1f5f9;">
+                  <ion-input label="Name" label-placement="stacked" v-model="link.nama_tautan" placeholder="e.g. Zoom Link" style="flex: 1; margin-right: 8px;"></ion-input>
+                  <ion-input label="URL" label-placement="stacked" v-model="link.url" placeholder="https://..." style="flex: 2; margin-right: 8px;"></ion-input>
+                  <ion-button fill="clear" color="danger" @click="eventLinks.splice(idx, 1)" style="margin-top: auto;">
+                    <ion-icon :icon="trashOutline"></ion-icon>
+                  </ion-button>
+                </ion-item>
+              </ion-list>
+              <ion-button fill="clear" @click="eventLinks.push({ nama_tautan: '', url: '' })" style="margin-left: 8px; font-size: 14px;">+ Add Link</ion-button>
+            </div>
 
             <ion-item>
               <ion-select label="Status" label-placement="floating" v-model="newEvent.status">
@@ -152,14 +156,14 @@
                     </ion-button>
                   </div>
                   
-                  <ion-select label="Assign To" label-placement="floating" v-model="task.assign_type" @ionChange="task.assigned_to_id = null; task.assigned_to_divisi_id = null;" style="margin-top: 8px;">
+                  <ion-select label="Assign To" label-placement="floating" v-model="task.assign_type" @ionChange="task.assigned_to_ids = []; task.assigned_to_divisi_id = null;" style="margin-top: 8px;">
                     <ion-select-option value="global">Global (Everyone)</ion-select-option>
                     <ion-select-option value="individu">Individu (Specific Person)</ion-select-option>
                     <ion-select-option value="kelompok">Kelompok (Division)</ion-select-option>
                   </ion-select>
                   
                   <ion-item v-if="task.assign_type === 'individu'" button @click="openUserSearchModal(index)" style="margin-top: 8px; --padding-start: 0; --inner-padding-end: 0;">
-                    <ion-input label="Select Person" label-placement="floating" readonly :value="getSelectedUserName(task.assigned_to_id)" placeholder="Click to select a person"></ion-input>
+                    <ion-input label="Select Persons" label-placement="floating" readonly :value="getSelectedUserName(task.assigned_to_ids)" placeholder="Click to select persons"></ion-input>
                   </ion-item>
                   
                   <ion-select v-if="task.assign_type === 'kelompok'" label="Select Division" label-placement="floating" v-model="task.assigned_to_divisi_id" style="margin-top: 8px;">
@@ -195,15 +199,47 @@
         </ion-header>
         <ion-content>
           <ion-list>
-            <ion-item v-for="u in filteredUsers" :key="u.id" button @click="selectUser(u.id)">
+            <ion-item v-for="u in filteredUsers" :key="u.id">
+              <ion-checkbox slot="start" :checked="activeTaskIndex !== null && newTasks[activeTaskIndex].assigned_to_ids.includes(u.id)" @ionChange="toggleUserSelection(u.id, $event)"></ion-checkbox>
               <ion-label>
                 <h2>{{ u.nama }}</h2>
                 <p v-if="u.nim">{{ u.nim }}</p>
               </ion-label>
-              <ion-icon v-if="activeTaskIndex !== null && newTasks[activeTaskIndex].assigned_to_id === u.id" slot="end" name="checkmark-outline" color="primary"></ion-icon>
             </ion-item>
             <ion-item v-if="filteredUsers.length === 0">
               <ion-label class="ion-text-center" color="medium">No users found</ion-label>
+            </ion-item>
+          </ion-list>
+        </ion-content>
+      </ion-modal>
+
+      <!-- Lokasi Search Modal -->
+      <ion-modal :is-open="isLokasiModalOpen" @didDismiss="isLokasiModalOpen = false">
+        <ion-header>
+          <ion-toolbar>
+            <ion-title>Select Location</ion-title>
+            <ion-buttons slot="end">
+              <ion-button @click="isLokasiModalOpen = false">Close</ion-button>
+            </ion-buttons>
+          </ion-toolbar>
+          <ion-toolbar>
+            <ion-searchbar v-model="lokasiSearchQuery" placeholder="Search location..."></ion-searchbar>
+          </ion-toolbar>
+        </ion-header>
+        <ion-content>
+          <ion-list>
+            <ion-item button @click="selectLokasi(null)">
+              <ion-label>None (TBA)</ion-label>
+            </ion-item>
+            <ion-item v-for="l in filteredLokasi" :key="l.id" button @click="selectLokasi(l.id)">
+              <ion-label>
+                <h2>{{ l.nama_ruangan }}</h2>
+                <p>Capacity: {{ l.kapasitas || 'Unlimited' }}</p>
+              </ion-label>
+            </ion-item>
+            <ion-item button @click="createNewLokasi">
+              <ion-icon slot="start" :icon="addOutline" color="primary"></ion-icon>
+              <ion-label color="primary">Add New Location...</ion-label>
             </ion-item>
           </ion-list>
         </ion-content>
@@ -218,9 +254,9 @@ import {
   IonPage, IonContent, IonButton, 
   IonAccordionGroup, IonAccordion, IonItem, IonLabel, IonIcon, toastController, alertController,
   IonModal, IonHeader, IonToolbar, IonTitle, IonButtons, IonList, IonInput, IonTextarea, IonSelect, IonSelectOption,
-  IonSegment, IonSegmentButton, IonDatetime, IonDatetimeButton, IonPopover, IonSearchbar
+  IonSegment, IonSegmentButton, IonDatetime, IonDatetimeButton, IonPopover, IonSearchbar, IonCheckbox
 } from '@ionic/vue';
-import { createOutline, trashOutline } from 'ionicons/icons';
+import { createOutline, trashOutline, addOutline } from 'ionicons/icons';
 import { ref, onMounted, computed } from 'vue';
 import CustomHeader from '../components/CustomHeader.vue';
 import { supabase } from '../supabase';
@@ -235,8 +271,10 @@ const editingEventId = ref<number | null>(null);
 
 const usersList = ref<any[]>([]);
 const divisiList = ref<any[]>([]);
+const lokasiList = ref<any[]>([]);
+const kategoriList = ref<any[]>([]);
 
-const newTasks = ref<{ nama_tugas: string, assign_type: 'global' | 'individu' | 'kelompok', assigned_to_id: string | null, assigned_to_divisi_id: number | null }[]>([]);
+const newTasks = ref<{ nama_tugas: string, assign_type: 'global' | 'individu' | 'kelompok', assigned_to_ids: string[], assigned_to_divisi_id: number | null }[]>([]);
 
 const isUserSelectModalOpen = ref(false);
 const activeTaskIndex = ref<number | null>(null);
@@ -256,17 +294,82 @@ const openUserSearchModal = (index: number) => {
   isUserSelectModalOpen.value = true;
 };
 
-const selectUser = (id: string) => {
-  if (activeTaskIndex.value !== null) {
-    newTasks.value[activeTaskIndex.value].assigned_to_id = id;
+const toggleUserSelection = (id: string, event: any) => {
+  if (activeTaskIndex.value === null) return;
+  const isChecked = event.detail.checked;
+  const task = newTasks.value[activeTaskIndex.value];
+  if (isChecked && !task.assigned_to_ids.includes(id)) {
+    task.assigned_to_ids.push(id);
+  } else if (!isChecked) {
+    task.assigned_to_ids = task.assigned_to_ids.filter((uid: string) => uid !== id);
   }
-  isUserSelectModalOpen.value = false;
 };
 
-const getSelectedUserName = (userId: string | null) => {
-  if (!userId) return '';
-  const u = usersList.value.find(user => user.id === userId);
-  return u ? (u.nim ? `${u.nama} (${u.nim})` : u.nama) : '';
+const getSelectedUserName = (userIds: string[]) => {
+  if (!userIds || userIds.length === 0) return '';
+  if (userIds.length === 1) {
+    const u = usersList.value.find(user => user.id === userIds[0]);
+    return u ? (u.nim ? `${u.nama} (${u.nim})` : u.nama) : '';
+  }
+  return `${userIds.length} persons selected`;
+};
+
+const isLokasiModalOpen = ref(false);
+const lokasiSearchQuery = ref('');
+
+const filteredLokasi = computed(() => {
+  const query = lokasiSearchQuery.value.toLowerCase();
+  if (!query) return lokasiList.value;
+  return lokasiList.value.filter(l => l.nama_ruangan.toLowerCase().includes(query));
+});
+
+const selectedLokasiText = computed(() => {
+  if (newEvent.value.lokasi_id === null) return 'None (TBA)';
+  const l = lokasiList.value.find(l => l.id === newEvent.value.lokasi_id);
+  return l ? `${l.nama_ruangan} (Cap: ${l.kapasitas || 'Unlimited'})` : 'None (TBA)';
+});
+
+const selectLokasi = (id: number | null) => {
+  newEvent.value.lokasi_id = id;
+  isLokasiModalOpen.value = false;
+};
+
+const createNewLokasi = async () => {
+  isLokasiModalOpen.value = false;
+  const alert = await alertController.create({
+    header: 'New Location',
+    inputs: [
+      { name: 'nama_ruangan', type: 'text', placeholder: 'Room Name (e.g. Hall A)' },
+      { name: 'kapasitas', type: 'number', placeholder: 'Capacity (Optional)' }
+    ],
+    buttons: [
+      { text: 'Cancel', role: 'cancel' },
+      {
+        text: 'Save',
+        handler: async (data) => {
+          if (!data.nama_ruangan) {
+            showToast('Room name is required', 'danger');
+            return false;
+          }
+          const capacity = data.kapasitas ? parseInt(data.kapasitas) : null;
+          const { data: newLokasi, error } = await supabase
+            .from('lokasi')
+            .insert([{ nama_ruangan: data.nama_ruangan, kapasitas: capacity }])
+            .select('*')
+            .single();
+          if (error) {
+            showToast('Failed to add location: ' + error.message, 'danger');
+          } else if (newLokasi) {
+            lokasiList.value.push(newLokasi);
+            lokasiList.value.sort((a, b) => a.nama_ruangan.localeCompare(b.nama_ruangan));
+            newEvent.value.lokasi_id = newLokasi.id;
+            showToast('Location added successfully', 'success');
+          }
+        }
+      }
+    ]
+  });
+  await alert.present();
 };
 
 const newEvent = ref({
@@ -274,12 +377,14 @@ const newEvent = ref({
   deskripsi: '',
   start_date: '',
   end_date: '',
-  location: '',
+  lokasi_id: null as number | null,
   kuota: null as number | null,
-  kategori: [] as string[],
+  kategori_ids: [] as number[],
   status: 'DRAFT',
   image_url: ''
 });
+
+const eventLinks = ref<{ nama_tautan: string, url: string }[]>([]);
 
 const showToast = async (msg: string, color: string) => {
   const toast = await toastController.create({
@@ -294,7 +399,7 @@ const fetchEvents = async () => {
   try {
     const { data, error } = await supabase
       .from('events')
-      .select('id, nama_event')
+      .select('id, nama_event, start_date, end_date')
       .order('id', { ascending: false });
       
     if (error) throw error;
@@ -304,22 +409,26 @@ const fetchEvents = async () => {
   }
 };
 
-const fetchUsersAndDivisi = async () => {
+const fetchMasterData = async () => {
   try {
-    const [usersRes, divisiRes] = await Promise.all([
+    const [usersRes, divisiRes, lokasiRes, kategoriRes] = await Promise.all([
       supabase.from('users').select('id, nama, nim').order('nama'),
-      supabase.from('divisi').select('id, nama_divisi').order('nama_divisi')
+      supabase.from('divisi').select('id, nama_divisi').order('nama_divisi'),
+      supabase.from('lokasi').select('*').order('nama_ruangan'),
+      supabase.from('kategori_event').select('*').order('nama_kategori')
     ]);
     if (usersRes.data) usersList.value = usersRes.data;
     if (divisiRes.data) divisiList.value = divisiRes.data;
+    if (lokasiRes.data) lokasiList.value = lokasiRes.data;
+    if (kategoriRes.data) kategoriList.value = kategoriRes.data;
   } catch (err) {
-    console.error('Error fetching users/divisi', err);
+    console.error('Error fetching master data', err);
   }
 };
 
 onMounted(() => {
   fetchEvents();
-  fetchUsersAndDivisi();
+  fetchMasterData();
 });
 
 const createEvent = () => {
@@ -337,12 +446,13 @@ const createEvent = () => {
     deskripsi: '',
     start_date: localISOTime,
     end_date: laterISOTime,
-    location: '',
+    lokasi_id: null,
     kuota: null,
-    kategori: [],
+    kategori_ids: [],
     status: 'DRAFT',
     image_url: ''
   };
+  eventLinks.value = [];
   newTasks.value = [];
   selectedSegment.value = 'event';
   isCreateModalOpen.value = true;
@@ -383,7 +493,7 @@ const addTask = () => {
   newTasks.value.push({ 
     nama_tugas: '', 
     assign_type: 'global',
-    assigned_to_id: null,
+    assigned_to_ids: [],
     assigned_to_divisi_id: null 
   });
 };
@@ -409,9 +519,8 @@ const saveEvent = async () => {
       deskripsi: newEvent.value.deskripsi || null,
       start_date: newEvent.value.start_date ? new Date(newEvent.value.start_date).toISOString() : null,
       end_date: newEvent.value.end_date ? new Date(newEvent.value.end_date).toISOString() : null,
-      location: newEvent.value.location || null,
+      lokasi_id: newEvent.value.lokasi_id || null,
       kuota: newEvent.value.kuota ? Number(newEvent.value.kuota) : null,
-      kategori: newEvent.value.kategori.length > 0 ? (newEvent.value.kategori as any) : null,
       status: newEvent.value.status as any,
       created_by: user.id
     };
@@ -424,6 +533,21 @@ const saveEvent = async () => {
         
       if (updateError) throw updateError;
       
+      // Update Kategori Mapping
+      await supabase.from('event_kategori_mapping').delete().eq('event_id', editingEventId.value);
+      if (newEvent.value.kategori_ids.length > 0) {
+        const catPayload = newEvent.value.kategori_ids.map(kid => ({ event_id: editingEventId.value!, kategori_id: kid }));
+        await supabase.from('event_kategori_mapping').insert(catPayload);
+      }
+
+      // Update Links
+      await supabase.from('event_links').delete().eq('event_id', editingEventId.value);
+      const validLinks = eventLinks.value.filter(l => l.nama_tautan && l.url);
+      if (validLinks.length > 0) {
+        const linksPayload = validLinks.map(l => ({ event_id: editingEventId.value!, nama_tautan: l.nama_tautan, url: l.url }));
+        await supabase.from('event_links').insert(linksPayload);
+      }
+      
       await supabase.from('tugas').delete().eq('event_id', editingEventId.value);
       
       const validTasks = newTasks.value.filter(t => t.nama_tugas.trim() !== '');
@@ -432,10 +556,49 @@ const saveEvent = async () => {
           nama_tugas: t.nama_tugas,
           event_id: editingEventId.value,
           assigned_by_id: user.id,
-          assigned_to_id: t.assign_type === 'individu' ? t.assigned_to_id : null,
-          assigned_to_divisi_id: t.assign_type === 'kelompok' ? t.assigned_to_divisi_id : null
+          assign_type: t.assign_type
         }));
-        await supabase.from('tugas').insert(tasksPayload);
+        
+        const { data: insertedTasks, error: taskErr } = await supabase
+          .from('tugas')
+          .insert(tasksPayload)
+          .select('id');
+          
+        if (taskErr) throw taskErr;
+        
+        if (insertedTasks && insertedTasks.length === validTasks.length) {
+          let assignmentsPayload: any[] = [];
+          
+          for (let i = 0; i < validTasks.length; i++) {
+            const taskObj = validTasks[i];
+            const taskId = insertedTasks[i].id;
+            let targetUserIds: string[] = [];
+            
+            if (taskObj.assign_type === 'global') {
+              const { data: allUsers } = await supabase.from('users').select('id');
+              if (allUsers) targetUserIds = allUsers.map((u: any) => u.id);
+            } else if (taskObj.assign_type === 'individu') {
+              if (taskObj.assigned_to_ids && taskObj.assigned_to_ids.length > 0) targetUserIds.push(...taskObj.assigned_to_ids);
+            } else if (taskObj.assign_type === 'kelompok') {
+              if (taskObj.assigned_to_divisi_id) {
+                const { data: groupUsers } = await supabase.from('users').select('id').eq('divisi_id', taskObj.assigned_to_divisi_id);
+                if (groupUsers) targetUserIds = groupUsers.map((u: any) => u.id);
+              }
+            }
+            
+            targetUserIds.forEach(uid => {
+              assignmentsPayload.push({
+                tugas_id: taskId,
+                user_id: uid,
+                status_selesai: false
+              });
+            });
+          }
+          
+          if (assignmentsPayload.length > 0) {
+            await supabase.from('tugas_assignments').insert(assignmentsPayload);
+          }
+        }
       }
 
       if (newEvent.value.image_url) {
@@ -455,6 +618,19 @@ const saveEvent = async () => {
         .single();
   
       if (error) throw error;
+      
+      // Insert Kategori Mapping
+      if (newEvent.value.kategori_ids.length > 0 && insertedEvent) {
+        const catPayload = newEvent.value.kategori_ids.map(kid => ({ event_id: insertedEvent.id, kategori_id: kid }));
+        await supabase.from('event_kategori_mapping').insert(catPayload);
+      }
+
+      // Insert Links
+      const validLinks = eventLinks.value.filter(l => l.nama_tautan && l.url);
+      if (validLinks.length > 0 && insertedEvent) {
+        const linksPayload = validLinks.map(l => ({ event_id: insertedEvent.id, nama_tautan: l.nama_tautan, url: l.url }));
+        await supabase.from('event_links').insert(linksPayload);
+      }
   
       if (newEvent.value.image_url && insertedEvent) {
         const docPayload = {
@@ -471,10 +647,49 @@ const saveEvent = async () => {
           nama_tugas: t.nama_tugas,
           event_id: insertedEvent.id,
           assigned_by_id: user.id,
-          assigned_to_id: t.assign_type === 'individu' ? t.assigned_to_id : null,
-          assigned_to_divisi_id: t.assign_type === 'kelompok' ? t.assigned_to_divisi_id : null
+          assign_type: t.assign_type
         }));
-        await supabase.from('tugas').insert(tasksPayload);
+        
+        const { data: insertedTasks, error: taskErr } = await supabase
+          .from('tugas')
+          .insert(tasksPayload)
+          .select('id');
+          
+        if (taskErr) throw taskErr;
+        
+        if (insertedTasks && insertedTasks.length === validTasks.length) {
+          let assignmentsPayload: any[] = [];
+          
+          for (let i = 0; i < validTasks.length; i++) {
+            const taskObj = validTasks[i];
+            const taskId = insertedTasks[i].id;
+            let targetUserIds: string[] = [];
+            
+            if (taskObj.assign_type === 'global') {
+              const { data: allUsers } = await supabase.from('users').select('id');
+              if (allUsers) targetUserIds = allUsers.map((u: any) => u.id);
+            } else if (taskObj.assign_type === 'individu') {
+              if (taskObj.assigned_to_ids && taskObj.assigned_to_ids.length > 0) targetUserIds.push(...taskObj.assigned_to_ids);
+            } else if (taskObj.assign_type === 'kelompok') {
+              if (taskObj.assigned_to_divisi_id) {
+                const { data: groupUsers } = await supabase.from('users').select('id').eq('divisi_id', taskObj.assigned_to_divisi_id);
+                if (groupUsers) targetUserIds = groupUsers.map((u: any) => u.id);
+              }
+            }
+            
+            targetUserIds.forEach(uid => {
+              assignmentsPayload.push({
+                tugas_id: taskId,
+                user_id: uid,
+                status_selesai: false
+              });
+            });
+          }
+          
+          if (assignmentsPayload.length > 0) {
+            await supabase.from('tugas_assignments').insert(assignmentsPayload);
+          }
+        }
       }
       showToast('Event created successfully', 'success');
     }
@@ -501,7 +716,7 @@ const editEvent = async (event: any) => {
 
     const { data: tasksData, error: tasksError } = await supabase
       .from('tugas')
-      .select('nama_tugas, assigned_to_id, assigned_to_divisi_id')
+      .select('nama_tugas, assign_type')
       .eq('event_id', event.id);
       
     if (tasksError) throw tasksError;
@@ -512,28 +727,37 @@ const editEvent = async (event: any) => {
       .eq('event_id', event.id)
       .order('created_at', { ascending: false })
       .limit(1);
+      
+    const { data: mappingData } = await supabase
+      .from('event_kategori_mapping')
+      .select('kategori_id')
+      .eq('event_id', event.id);
+      
+    const { data: linksData } = await supabase
+      .from('event_links')
+      .select('nama_tautan, url')
+      .eq('event_id', event.id);
 
     newEvent.value = {
       nama_event: eventData.nama_event,
       deskripsi: eventData.deskripsi || '',
       start_date: eventData.start_date ? eventData.start_date.slice(0, 16) : '',
       end_date: eventData.end_date ? eventData.end_date.slice(0, 16) : '',
-      location: eventData.location || '',
+      lokasi_id: eventData.lokasi_id || null,
       kuota: eventData.kuota,
-      kategori: eventData.kategori || [],
+      kategori_ids: mappingData ? mappingData.map(m => m.kategori_id) : [],
       status: eventData.status || 'DRAFT',
       image_url: docData && docData.length > 0 ? docData[0].url_foto : ''
     };
+    
+    eventLinks.value = linksData || [];
 
     newTasks.value = tasksData ? tasksData.map(t => {
-      let type: 'global' | 'individu' | 'kelompok' = 'global';
-      if (t.assigned_to_id) type = 'individu';
-      else if (t.assigned_to_divisi_id) type = 'kelompok';
       return {
         nama_tugas: t.nama_tugas,
-        assign_type: type,
-        assigned_to_id: t.assigned_to_id,
-        assigned_to_divisi_id: t.assigned_to_divisi_id
+        assign_type: (t.assign_type as any) || 'global',
+        assigned_to_ids: [],
+        assigned_to_divisi_id: null
       };
     }) : [];
     

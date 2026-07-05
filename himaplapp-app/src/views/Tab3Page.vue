@@ -82,18 +82,27 @@ const fetchNotifications = async (isFirstLoad = true, event?: any) => {
       const to = from + pageSize - 1;
       
       const { data, error } = await supabase
-        .from('notifikasi')
-        .select('*, read_notifications(id)')
-        .or(`user_id.eq.${user.id},user_id.is.null`)
+        .from('penerima_notifikasi')
+        .select('id, is_read, notifikasi(*)')
+        .eq('user_id', user.id)
         .order('created_at', { ascending: false })
         .range(from, to);
         
       if (error) throw error;
       
       if (isFirstLoad) {
-        notifications.value = data || [];
+        notifications.value = data ? data.map((item: any) => ({
+          ...item.notifikasi, 
+          is_read: item.is_read, 
+          penerima_id: item.id 
+        })) : [];
       } else {
-        notifications.value = [...notifications.value, ...(data || [])];
+        const newData = data ? data.map((item: any) => ({
+          ...item.notifikasi, 
+          is_read: item.is_read, 
+          penerima_id: item.id 
+        })) : [];
+        notifications.value = [...notifications.value, ...newData];
       }
 
       if (event) {
@@ -117,18 +126,11 @@ const loadMore = (event: any) => {
 };
 
 const isNotificationRead = (notif: any) => {
-  if (notif.user_id !== null) {
-    return notif.is_read;
-  }
-  return notif.read_notifications && notif.read_notifications.length > 0;
+  return notif.is_read;
 };
 
 const openNotification = (notif: any) => {
-  if (notif.user_id !== null) {
-    notif.is_read = true;
-  } else {
-    notif.read_notifications = [{ id: -1 }]; // Optimistic update
-  }
+  notif.is_read = true; // Optimistic update
   router.push('/notification/' + notif.id);
 };
 
@@ -160,29 +162,25 @@ onIonViewWillEnter(() => {
         if (user) {
           const to = page.value * pageSize + pageSize - 1;
           const { data } = await supabase
-            .from('notifikasi')
-            .select('*, read_notifications(id)')
-            .or(`user_id.eq.${user.id},user_id.is.null`)
+            .from('penerima_notifikasi')
+            .select('id, is_read, notifikasi(*)')
+            .eq('user_id', user.id)
             .order('created_at', { ascending: false })
             .range(0, to);
           
           if (data) {
-            // Update items while preserving local optimistic state if possible
-            // But since RLS might block, let's keep our optimistic state
+            const mappedData = data.map((item: any) => ({
+              ...item.notifikasi, 
+              is_read: item.is_read, 
+              penerima_id: item.id 
+            }));
             notifications.value.forEach(localNotif => {
-              const remoteNotif = data.find(n => n.id === localNotif.id);
+              const remoteNotif = mappedData.find((n: any) => n.id === localNotif.id);
               if (remoteNotif) {
-                // If local says read, keep it read (optimistic)
-                if (localNotif.user_id !== null) {
-                  if (localNotif.is_read) remoteNotif.is_read = true;
-                } else {
-                  if (localNotif.read_notifications && localNotif.read_notifications.length > 0) {
-                    remoteNotif.read_notifications = [{ id: -1 }];
-                  }
-                }
+                if (localNotif.is_read) remoteNotif.is_read = true;
               }
             });
-            notifications.value = data;
+            notifications.value = mappedData;
           }
         }
       } catch (e) {}

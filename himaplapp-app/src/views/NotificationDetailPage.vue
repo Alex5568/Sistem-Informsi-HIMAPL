@@ -84,31 +84,17 @@ const fetchNotificationDetail = async () => {
     if (error) throw error;
     notification.value = data;
     
-    // Handle reading status
+    // Handle reading status via penerima_notifikasi
     if (data) {
-      if (data.user_id !== null) {
-        // Personal notification
-        if (!data.is_read) {
-          const { error: updateError } = await supabase
-            .from('notifikasi')
-            .update({ is_read: true })
-            .eq('id', numericId);
-            
-          if (updateError) {
-            console.error('Failed to update is_read status:', updateError);
-          }
-        }
-      } else {
-        // Global notification
-        const { data: { user } } = await supabase.auth.getUser();
-        if (user) {
-          const { error: insertError } = await supabase
-            .from('read_notifications')
-            .insert({ notif_id: numericId, user_id: user.id });
-            
-          if (insertError && insertError.code !== '23505') {
-            console.error('Failed to insert read_notification:', insertError);
-          }
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        const { error: updateError } = await supabase
+          .from('penerima_notifikasi')
+          .update({ is_read: true })
+          .match({ notif_id: numericId, user_id: user.id });
+          
+        if (updateError) {
+          console.error('Failed to update is_read status:', updateError);
         }
       }
     }

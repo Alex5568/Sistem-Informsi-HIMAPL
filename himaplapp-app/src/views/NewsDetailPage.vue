@@ -36,6 +36,14 @@
                 </div>
               </div>
 
+              <div class="info-row" style="margin-top: 16px;">
+                <ion-icon :icon="personOutline" class="info-icon"></ion-icon>
+                <div class="info-text">
+                  <strong>Published By</strong>
+                  <p>{{ news.users?.nama || 'Admin' }}</p>
+                </div>
+              </div>
+
               <div class="description-section" style="margin-top: 24px;">
                 <p class="news-content-text">{{ news.content }}</p>
               </div>
@@ -56,7 +64,7 @@ import {
   IonPage, IonHeader, IonToolbar, IonTitle, IonButtons, IonBackButton, 
   IonContent, IonCard, IonCardContent, IonBadge, IonIcon
 } from '@ionic/vue';
-import { calendarOutline } from 'ionicons/icons';
+import { calendarOutline, personOutline } from 'ionicons/icons';
 import { ref, onMounted } from 'vue';
 import { useRoute } from 'vue-router';
 import { supabase } from '../supabase';
@@ -73,7 +81,7 @@ const fetchNewsDetail = async () => {
   try {
     const { data, error } = await supabase
       .from('news')
-      .select('*')
+      .select('*, users(nama)')
       .eq('id', newsId)
       .single();
 

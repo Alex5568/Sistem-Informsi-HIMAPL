@@ -64,6 +64,11 @@ const routes: Array<RouteRecordRaw> = [
     component: () => import('../views/SettingsPage.vue')
   },
   {
+    path: '/update-password',
+    name: 'UpdatePassword',
+    component: () => import('../views/UpdatePasswordPage.vue')
+  },
+  {
     path: '/event/:id',
     name: 'EventDetail',
     component: () => import('../views/EventDetailPage.vue')

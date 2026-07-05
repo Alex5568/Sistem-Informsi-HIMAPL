@@ -41,7 +41,7 @@
                 <ion-icon :icon="locationOutline" class="info-icon"></ion-icon>
                 <div class="info-text">
                   <strong>Location</strong>
-                  <p>{{ event.location || 'TBA' }}</p>
+                  <p>{{ event.lokasi ? event.lokasi.nama_ruangan : 'TBA' }}</p>
                 </div>
               </div>
               
@@ -58,11 +58,21 @@
                 <p class="event-desc">{{ event.deskripsi || 'No description provided.' }}</p>
               </div>
               
-              <div class="tags-section" style="margin-top: 24px;" v-if="event.kategori && event.kategori.length">
+              <div class="tags-section" style="margin-top: 24px;" v-if="event.event_kategori_mapping && event.event_kategori_mapping.length">
                 <h3>Tags</h3>
-                <ion-badge class="badge-blue" v-for="cat in event.kategori" :key="cat" style="margin-right: 8px;">
-                  {{ cat }}
+                <ion-badge class="badge-blue" v-for="mapping in event.event_kategori_mapping" :key="mapping.kategori_event?.nama_kategori" style="margin-right: 8px;">
+                  {{ mapping.kategori_event?.nama_kategori }}
                 </ion-badge>
+              </div>
+
+              <div class="links-section" style="margin-top: 24px;" v-if="event.event_links && event.event_links.length">
+                <h3>Event Links</h3>
+                <ion-list lines="none" style="padding: 0;">
+                  <ion-item v-for="link in event.event_links" :key="link.url" style="--padding-start: 0; --inner-padding-end: 0;" button @click="openLink(link.url)">
+                    <ion-icon :icon="linkOutline" slot="start" color="primary"></ion-icon>
+                    <ion-label color="primary">{{ link.nama_tautan }}</ion-label>
+                  </ion-item>
+                </ion-list>
               </div>
             </ion-card-content>
           </ion-card>
@@ -215,6 +225,10 @@ const isRegistered = ref(false);
 const participantsCount = ref(0);
 const currentUserId = ref<string | null>(null);
 
+const openLink = (url: string) => {
+  window.open(url, '_blank');
+};
+
 const fetchEventData = async () => {
   isLoading.value = true;
   try {
@@ -224,41 +238,40 @@ const fetchEventData = async () => {
     // Fetch Event Details
     const { data: eventData, error: eventError } = await supabase
       .from('events')
-      .select('*')
+      .select('*, lokasi(nama_ruangan), event_kategori_mapping(kategori_event(nama_kategori)), event_links(nama_tautan, url)')
       .eq('id', eventId)
       .single();
       
     if (eventError) throw eventError;
     event.value = eventData;
 
-    // Fetch Tasks
-    const { data: tasksData, error: tasksError } = await supabase
-      .from('tugas')
-      .select('*')
-      .eq('event_id', eventId);
-      
-    if (!tasksError && tasksData) {
-      tasks.value = tasksData;
-      
-      // Fetch user completions for these tasks
-      if (currentUserId.value && tasksData.length > 0) {
-        const taskIds = tasksData.map((t: any) => t.id);
-        const { data: completions } = await supabase
-          .from('tugas_completed')
-          .select('tugas_id')
-          .in('tugas_id', taskIds)
-          .eq('user_id', currentUserId.value);
-          
-        if (completions) {
-          const completedTaskIds = new Set(completions.map(c => c.tugas_id));
-          tasks.value.forEach(task => {
-            task.status_selesai = completedTaskIds.has(task.id);
-          });
-        } else {
-          tasks.value.forEach(task => task.status_selesai = false);
-        }
+    // Fetch Tasks via tugas_assignments
+    if (currentUserId.value) {
+      const { data: assignments, error: tasksError } = await supabase
+        .from('tugas_assignments')
+        .select('id, status_selesai, tugas!inner(*)')
+        .eq('user_id', currentUserId.value)
+        .eq('tugas.event_id', eventId);
+        
+      if (!tasksError && assignments) {
+        tasks.value = assignments.map(a => ({
+          ...a.tugas,
+          assignment_id: a.id,
+          status_selesai: a.status_selesai
+        }));
       } else {
-        tasks.value.forEach(task => task.status_selesai = false);
+        tasks.value = [];
+      }
+    } else {
+      // If not logged in, we could still fetch event tasks without status
+      const { data: tasksData } = await supabase
+        .from('tugas')
+        .select('*')
+        .eq('event_id', eventId);
+      if (tasksData) {
+        tasks.value = tasksData.map(t => ({ ...t, status_selesai: false }));
+      } else {
+        tasks.value = [];
       }
     }
 
@@ -524,21 +537,13 @@ const toggleTaskStatus = async (task: any) => {
   task.status_selesai = newStatus;
   
   try {
-    if (newStatus) {
-      // Mark as completed
-      const { error } = await supabase
-        .from('tugas_completed')
-        .insert([{ tugas_id: task.id, user_id: currentUserId.value }]);
-      if (error) throw error;
-    } else {
-      // Unmark
-      const { error } = await supabase
-        .from('tugas_completed')
-        .delete()
-        .eq('tugas_id', task.id)
-        .eq('user_id', currentUserId.value);
-      if (error) throw error;
-    }
+    const { error } = await supabase
+      .from('tugas_assignments')
+      .update({ status_selesai: newStatus })
+      .eq('id', task.assignment_id);
+
+    if (error) throw error;
+    
     showToast(newStatus ? 'Tugas diselesaikan' : 'Status tugas dibatalkan', 'success');
   } catch (err: any) {
     // Revert on error
@@ -597,6 +602,30 @@ const registerEvent = async () => {
            throw new Error(error.message);
        }
        throw error;
+    }
+
+    // Auto-assign tasks to newly registered user
+    try {
+      const { data: eventTasks } = await supabase.from('tugas').select('id, assign_type').eq('event_id', eventId);
+      if (eventTasks && eventTasks.length > 0) {
+        let tasksToAssign: any[] = [];
+        
+        for (const t of eventTasks) {
+          if (t.assign_type === 'global') {
+            tasksToAssign.push({ tugas_id: t.id, user_id: currentUserId.value, status_selesai: false });
+          }
+        }
+        
+        if (tasksToAssign.length > 0) {
+          // insert with onConflict ignore in case they already have it
+          await supabase.from('tugas_assignments').upsert(tasksToAssign, { onConflict: 'tugas_id, user_id', ignoreDuplicates: true });
+        }
+      }
+      
+      // Refresh tasks
+      fetchEventData();
+    } catch (e) {
+      console.error("Auto assign error", e);
     }
 
     isRegistered.value = true;

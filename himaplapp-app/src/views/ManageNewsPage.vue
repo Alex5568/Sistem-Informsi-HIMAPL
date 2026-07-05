@@ -252,7 +252,7 @@ const saveNews = async () => {
 
   isSaving.value = true;
   try {
-    const payload = {
+    const payload: any = {
       title: newNews.value.title,
       content: newNews.value.content,
       category: newNews.value.category as any,
@@ -268,6 +268,12 @@ const saveNews = async () => {
       if (updateError) throw updateError;
       showToast('News updated successfully', 'success');
     } else {
+      // Dapatkan user yang sedang login untuk dicatat sebagai publisher
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        payload.publisher_id = user.id;
+      }
+
       const { error: insertError } = await supabase
         .from('news')
         .insert([payload]);
