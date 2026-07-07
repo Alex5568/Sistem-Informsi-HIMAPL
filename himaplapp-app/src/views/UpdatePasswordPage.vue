@@ -61,10 +61,11 @@
 import { ref } from "vue";
 import { IonPage, IonContent, IonIcon, toastController, menuController, onIonViewWillEnter, onIonViewWillLeave } from "@ionic/vue";
 import { lockClosedOutline, eyeOutline, eyeOffOutline } from "ionicons/icons";
-import { useRouter } from "vue-router";
+import { useRouter, useRoute } from "vue-router";
 import { supabase } from "../supabase";
 
 const router = useRouter();
+const route = useRoute();
 
 onIonViewWillEnter(() => {
   menuController.enable(false);
@@ -89,6 +90,12 @@ const handleUpdatePassword = async () => {
     toast.present();
     return;
   }
+
+  if (!confirmPassword.value) {
+    const toast = await toastController.create({ message: 'Confirm password is required', duration: 2000, color: 'danger' });
+    toast.present();
+    return;
+  }
   
   if (newPassword.value !== confirmPassword.value) {
     const toast = await toastController.create({ message: 'Passwords do not match', duration: 2000, color: 'danger' });
@@ -104,7 +111,11 @@ const handleUpdatePassword = async () => {
 
   isLoading.value = true;
   try {
-    const { error } = await supabase.auth.updateUser({ password: newPassword.value });
+    const payload: any = { password: newPassword.value };
+    if (route.query.currentPassword) {
+      payload.current_password = route.query.currentPassword;
+    }
+    const { error } = await supabase.auth.updateUser(payload);
     
     if (error) throw error;
     

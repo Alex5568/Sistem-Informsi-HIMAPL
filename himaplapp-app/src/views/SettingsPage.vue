@@ -224,8 +224,8 @@ const handleChangePassword = async () => {
                 return false;
               }
             }
-            // Password correct! Navigate to update password page
-            router.push('/update-password');
+            // Password correct! Navigate to update password page and pass the old password
+            router.push({ path: '/update-password', query: { currentPassword: data.oldPassword } });
           } catch (e: any) {
             showToast(e.message || 'Failed to verify password', 'danger');
             return false;

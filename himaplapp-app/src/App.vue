@@ -182,11 +182,11 @@ const userEmail = ref('');
 const userRole = ref('');
 
 const isManager = computed(() => {
-  return ['Dosen', 'Ketua', 'Ketua Divisi'].includes(userRole.value);
+  return ['Dosen', 'Ketua', 'Wakil Ketua', 'Ketua Divisi'].includes(userRole.value);
 });
 
 const isRoleManager = computed(() => {
-  return ['Dosen', 'Ketua'].includes(userRole.value);
+  return ['Dosen', 'Ketua', 'Wakil Ketua'].includes(userRole.value);
 });
 
 const isDosen = computed(() => {

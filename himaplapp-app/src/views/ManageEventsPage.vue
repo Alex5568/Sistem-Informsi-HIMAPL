@@ -9,8 +9,35 @@
           Create Event
         </ion-button>
 
+        <!-- Filters Section -->
+        <div class="filters-container">
+          <div class="search-row">
+            <ion-searchbar 
+              placeholder="Search events..." 
+              class="custom-searchbar"
+              v-model="searchQuery"
+              mode="ios">
+            </ion-searchbar>
+            <ion-button fill="clear" color="primary" class="filter-toggle-btn" @click="showFilters = !showFilters">
+              <ion-icon slot="icon-only" :icon="optionsOutline"></ion-icon>
+            </ion-button>
+          </div>
+          
+          <div class="dropdown-filters" v-show="showFilters">
+            <ion-item class="filter-item" lines="none">
+              <ion-select placeholder="Year" interface="popover" v-model="selectedYear">
+                <ion-select-option v-for="year in availableYears" :key="year" :value="year.toString()">{{ year }}</ion-select-option>
+              </ion-select>
+            </ion-item>
+            
+            <ion-button fill="clear" color="medium" class="reset-button" @click="resetFilters" v-if="hasActiveFilters">
+              <ion-icon slot="icon-only" :icon="refreshOutline"></ion-icon>
+            </ion-button>
+          </div>
+        </div>
+
         <ion-accordion-group>
-          <ion-accordion v-for="event in events" :key="event.id" :value="String(event.id)">
+          <ion-accordion v-for="event in filteredEvents" :key="event.id" :value="String(event.id)">
             <ion-item slot="header" color="light">
               <ion-label>
                 <h2 style="font-weight: 600;">{{ event.nama_event }}</h2>
@@ -256,7 +283,7 @@ import {
   IonModal, IonHeader, IonToolbar, IonTitle, IonButtons, IonList, IonInput, IonTextarea, IonSelect, IonSelectOption,
   IonSegment, IonSegmentButton, IonDatetime, IonDatetimeButton, IonPopover, IonSearchbar, IonCheckbox
 } from '@ionic/vue';
-import { createOutline, trashOutline, addOutline } from 'ionicons/icons';
+import { createOutline, trashOutline, addOutline, optionsOutline, refreshOutline } from 'ionicons/icons';
 import { ref, onMounted, computed } from 'vue';
 import CustomHeader from '../components/CustomHeader.vue';
 import { supabase } from '../supabase';
@@ -268,6 +295,47 @@ const isUploadingImage = ref(false);
 const selectedSegment = ref('event');
 const isEditing = ref(false);
 const editingEventId = ref<number | null>(null);
+
+// Search & Filter State
+const searchQuery = ref('');
+const showFilters = ref(false);
+const selectedYear = ref('');
+
+const availableYears = computed(() => {
+  const years = new Set<string>();
+  events.value.forEach(event => {
+    if (event.start_date) {
+      years.add(new Date(event.start_date).getFullYear().toString());
+    }
+  });
+  return Array.from(years).sort((a, b) => parseInt(b) - parseInt(a));
+});
+
+const hasActiveFilters = computed(() => {
+  return searchQuery.value !== '' || selectedYear.value !== '';
+});
+
+const resetFilters = () => {
+  searchQuery.value = '';
+  selectedYear.value = '';
+};
+
+const filteredEvents = computed(() => {
+  return events.value.filter(event => {
+    // Search filter
+    if (searchQuery.value && event.nama_event && !event.nama_event.toLowerCase().includes(searchQuery.value.toLowerCase())) {
+      return false;
+    }
+    // Year filter
+    if (selectedYear.value && event.start_date) {
+      const eventYear = new Date(event.start_date).getFullYear().toString();
+      if (eventYear !== selectedYear.value) return false;
+    } else if (selectedYear.value && !event.start_date) {
+      return false;
+    }
+    return true;
+  });
+});
 
 const usersList = ref<any[]>([]);
 const divisiList = ref<any[]>([]);
@@ -828,5 +896,50 @@ const deleteEvent = async (id: number) => {
   margin-top: 24px;
   --background: #2563eb;
   font-weight: 600;
+}
+
+/* Filters Section */
+.filters-container {
+  margin-bottom: 24px;
+}
+
+.search-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.custom-searchbar {
+  --background: white;
+  --box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06);
+  --border-radius: 12px;
+  padding: 0;
+  flex: 1;
+}
+
+.filter-toggle-btn {
+  margin: 0;
+  height: 36px;
+  --background: white;
+  --border-radius: 12px;
+  box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06);
+}
+
+.dropdown-filters {
+  display: flex;
+  gap: 12px;
+  margin-top: 12px;
+}
+
+.filter-item {
+  --background: white;
+  --border-radius: 8px;
+  flex: 1;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+}
+
+.reset-button {
+  margin: 0;
+  height: 48px;
 }
 </style>

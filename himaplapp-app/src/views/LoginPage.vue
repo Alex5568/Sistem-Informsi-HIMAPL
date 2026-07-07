@@ -76,6 +76,7 @@
 
 <script setup lang="ts">
 import { ref } from "vue";
+import { Capacitor } from '@capacitor/core';
 import { IonPage, IonContent, IonIcon, toastController, alertController } from "@ionic/vue";
 import {
   atOutline,
@@ -126,9 +127,9 @@ const handleForgotPassword = async () => {
           }
           
           try {
-            // Check if native to set the correct redirect
-            const isNative = typeof window !== 'undefined' && (window as any).Capacitor?.isNative;
-            const redirectUrl = isNative ? 'himaplapp://update-password' : window.location.origin + '/update-password';
+            // Arahkan native app ke halaman penengah Vercel untuk mem-bypass pemblokiran Chrome
+            const isNative = Capacitor.isNativePlatform();
+            const redirectUrl = isNative ? 'https://himapl-redirect.vercel.app' : window.location.origin + '/update-password';
             
             const { error } = await supabase.auth.resetPasswordForEmail(data.email, {
               redirectTo: redirectUrl

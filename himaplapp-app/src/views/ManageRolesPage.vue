@@ -49,15 +49,30 @@
           <p>Create and manage organizational divisions.</p>
         </div>
         
-        <ion-list class="custom-list">
-          <ion-item v-for="div in divisionsList" :key="div.id" class="user-item">
-            <ion-icon slot="start" :icon="peopleOutline" color="primary"></ion-icon>
-            <ion-label>
-              <h2>{{ div.nama_divisi }}</h2>
-              <p>Ketua: <strong style="color: #475569;">{{ div.ketua_name || 'Belum ditugaskan' }}</strong></p>
-            </ion-label>
-          </ion-item>
-        </ion-list>
+        <ion-accordion-group>
+          <ion-accordion v-for="div in divisionsList" :key="div.id" :value="String(div.id)">
+            <ion-item slot="header" color="light">
+              <ion-icon slot="start" :icon="peopleOutline" color="primary"></ion-icon>
+              <ion-label>
+                <h2>{{ div.nama_divisi }}</h2>
+                <p>Ketua: <strong style="color: #475569;">{{ div.ketua_name || 'Belum ditugaskan' }}</strong></p>
+              </ion-label>
+            </ion-item>
+            
+            <div class="accordion-content" slot="content">
+              <div style="display: flex; justify-content: flex-end; gap: 8px;">
+                <ion-button fill="clear" @click="editDivision(div)">
+                  <ion-icon slot="start" :icon="createOutline"></ion-icon>
+                  Edit
+                </ion-button>
+                <ion-button fill="clear" color="danger" @click="deleteDivision(div.id)">
+                  <ion-icon slot="start" :icon="trashOutline"></ion-icon>
+                  Delete
+                </ion-button>
+              </div>
+            </div>
+          </ion-accordion>
+        </ion-accordion-group>
 
         <ion-fab vertical="bottom" horizontal="end" slot="fixed">
           <ion-fab-button @click="openCreateDivisionAlert">
@@ -91,6 +106,7 @@
                   <ion-select-option value="Anggota">Anggota</ion-select-option>
                   <ion-select-option value="Ketua Divisi">Ketua Divisi</ion-select-option>
                   <ion-select-option value="Ketua">Ketua</ion-select-option>
+                  <ion-select-option value="Wakil Ketua">Wakil Ketua</ion-select-option>
                   <ion-select-option value="Dosen">Dosen</ion-select-option>
                 </ion-select>
               </ion-item>
@@ -107,9 +123,9 @@
             <ion-button expand="block" class="ion-margin-top" @click="saveUserChanges">Save Changes</ion-button>
           </div>
 
-          <!-- Ketua Options -->
-          <div v-else-if="currentUserRole === 'Ketua'">
-            <div v-if="selectedUser.role === 'Ketua' || selectedUser.role === 'Dosen'">
+          <!-- Ketua & Wakil Ketua Options -->
+          <div v-else-if="currentUserRole === 'Ketua' || currentUserRole === 'Wakil Ketua'">
+            <div v-if="selectedUser.role === 'Ketua' || selectedUser.role === 'Wakil Ketua' || selectedUser.role === 'Dosen'">
               <p class="error-text">You do not have permission to change the role of a {{ selectedUser.role }}.</p>
             </div>
             <div v-else>
@@ -164,9 +180,11 @@ import {
   IonButton,
   IonSelect,
   IonSelectOption,
-  toastController
+  toastController,
+  IonAccordionGroup,
+  IonAccordion
 } from '@ionic/vue';
-import { shieldOutline, peopleOutline, addOutline } from 'ionicons/icons';
+import { shieldOutline, peopleOutline, addOutline, createOutline, trashOutline } from 'ionicons/icons';
 import { ref, onMounted } from 'vue';
 import { supabase } from '../supabase';
 
@@ -230,18 +248,8 @@ const fetchData = async () => {
   }
 
   if (userData) {
-    let ketuaCount = 0;
-    
     usersList.value = userData.map((user: any) => {
       let displayRole = user.role || 'Anggota';
-      
-      if (user.role === 'Ketua') {
-        ketuaCount++;
-        if (ketuaCount > 1) {
-          displayRole = 'Wakil Ketua';
-        }
-      }
-      
       return {
         ...user,
         displayRole
@@ -305,6 +313,65 @@ const createDivision = async (nama_divisi: string) => {
     showToast('Division created successfully');
     await fetchData();
   }
+};
+
+const editDivision = async (div: any) => {
+  const alert = await alertController.create({
+    header: 'Edit Division',
+    inputs: [
+      {
+        name: 'nama_divisi',
+        type: 'text',
+        value: div.nama_divisi,
+        placeholder: 'Division Name'
+      }
+    ],
+    buttons: [
+      { text: 'Cancel', role: 'cancel' },
+      {
+        text: 'Save',
+        handler: async (data) => {
+          if (!data.nama_divisi) return false;
+          const { error } = await supabase
+            .from('divisi')
+            .update({ nama_divisi: data.nama_divisi })
+            .eq('id', div.id);
+            
+          if (error) {
+            showToast('Failed to update division');
+          } else {
+            showToast('Division updated successfully');
+            await fetchData();
+          }
+        }
+      }
+    ]
+  });
+  await alert.present();
+};
+
+const deleteDivision = async (id: number) => {
+  const alert = await alertController.create({
+    header: 'Confirm Delete',
+    message: 'Are you sure you want to delete this division? Users in this division will have their division set to None.',
+    buttons: [
+      { text: 'Cancel', role: 'cancel' },
+      {
+        text: 'Delete',
+        role: 'destructive',
+        handler: async () => {
+          const { error } = await supabase.from('divisi').delete().eq('id', id);
+          if (error) {
+            showToast('Failed to delete division');
+          } else {
+            showToast('Division deleted successfully');
+            await fetchData();
+          }
+        }
+      }
+    ]
+  });
+  await alert.present();
 };
 
 const openUserRoleModal = (user: any) => {
@@ -404,6 +471,11 @@ ion-content {
   font-size: 15px;
   color: #64748b;
   margin: 0;
+}
+
+.accordion-content {
+  padding: 16px;
+  background: white;
 }
 
 .custom-list {

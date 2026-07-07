@@ -66,7 +66,7 @@
               <td>{{ report.nama_event }}</td>
               <td>{{ report.participantsCount }}</td>
               <td>{{ formatDate(report.start_date) }}</td>
-              <td>{{ formatCategory(report.kategori) }}</td>
+              <td>{{ formatCategory(report.kategoriList) }}</td>
             </tr>
           </tbody>
         </table>
@@ -106,11 +106,17 @@ import {
   IonSelectOption,
   IonItem,
   IonButton,
-  IonFooter
+  IonFooter,
+  toastController
 } from '@ionic/vue';
 import { documentTextOutline, refreshOutline, optionsOutline, printOutline } from 'ionicons/icons';
 import { ref, computed, onMounted } from 'vue';
 import { supabase } from '../supabase';
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
+import { Filesystem, Directory } from '@capacitor/filesystem';
+import { Share } from '@capacitor/share';
+import { Capacitor } from '@capacitor/core';
 
 const categories = ref<string[]>([]);
 const searchQuery = ref('');
@@ -133,15 +139,74 @@ const resetFilters = () => {
   selectedCategory.value = [];
 };
 
-const printReport = () => {
-  const originalTitle = document.title;
-  document.title = 'Annual Reports - HIMAPL';
-  
-  // A small delay to ensure the browser registers the title change before the print dialog opens
-  setTimeout(() => {
-    window.print();
-    document.title = originalTitle;
-  }, 100);
+const showToast = async (message: string, color: string = 'success') => {
+  const toast = await toastController.create({
+    message,
+    duration: 3000,
+    color
+  });
+  await toast.present();
+};
+
+const printReport = async () => {
+  try {
+    const doc = new jsPDF();
+    
+    // Add title
+    doc.setFontSize(18);
+    doc.text('Annual Reports - HIMAPL', 14, 22);
+    
+    // Prepare table data
+    const tableColumn = ["ID Event", "Event Name", "Participants", "Start Date", "Category"];
+    const tableRows: any[] = [];
+    
+    filteredReports.value.forEach(report => {
+      const reportData = [
+        report.id,
+        report.nama_event,
+        report.participantsCount,
+        formatDate(report.start_date),
+        formatCategory(report.kategoriList)
+      ];
+      tableRows.push(reportData);
+    });
+    
+    // Generate table
+    autoTable(doc, {
+      head: [tableColumn],
+      body: tableRows,
+      startY: 30,
+      theme: 'grid',
+      styles: { fontSize: 10 },
+      headStyles: { fillColor: [37, 99, 235] }
+    });
+    
+    // If it's a native device, save and share the PDF
+    if (Capacitor.isNativePlatform()) {
+      const pdfBase64 = doc.output('datauristring').split(',')[1];
+      const fileName = `HIMAPL_Reports_${new Date().getTime()}.pdf`;
+      
+      const savedFile = await Filesystem.writeFile({
+        path: fileName,
+        data: pdfBase64,
+        directory: Directory.Cache
+      });
+      
+      await Share.share({
+        title: 'HIMAPL Reports',
+        text: 'Here is the HIMAPL Event Report PDF.',
+        url: savedFile.uri,
+        dialogTitle: 'Share PDF Report'
+      });
+    } else {
+      // If it's on web, just download it
+      doc.save('HIMAPL_Reports.pdf');
+    }
+    
+  } catch (err: any) {
+    console.error("Error generating PDF:", err);
+    showToast('Failed to generate PDF', 'danger');
+  }
 };
 
 const formatDate = (dateString: string) => {
@@ -150,14 +215,11 @@ const formatDate = (dateString: string) => {
   return `${d.getDate().toString().padStart(2, '0')}/${(d.getMonth() + 1).toString().padStart(2, '0')}/${d.getFullYear()}`;
 };
 
-const formatCategory = (kategori: any) => {
-  try {
-    const parsed = typeof kategori === 'string' ? JSON.parse(kategori) : kategori;
-    if (Array.isArray(parsed)) return parsed.join(', ');
-    return parsed || '-';
-  } catch {
-    return kategori || '-';
+const formatCategory = (kategoriList: string[]) => {
+  if (kategoriList && kategoriList.length > 0) {
+    return kategoriList.join(', ');
   }
+  return '-';
 };
 
 const filteredReports = computed(() => {
@@ -172,16 +234,9 @@ const filteredReports = computed(() => {
       if (reportYear !== selectedYear.value) return false;
     }
     // Category filter
-    if (selectedCategory.value && selectedCategory.value.length > 0) {
-      let cats: string[] = [];
-      try {
-        const parsed = typeof report.kategori === 'string' ? JSON.parse(report.kategori) : report.kategori;
-        cats = Array.isArray(parsed) ? parsed : [parsed];
-      } catch {
-        cats = [report.kategori];
-      }
-      
-      const hasMatch = selectedCategory.value.some(selected => cats.includes(selected));
+    if (selectedCategory.value.length > 0) {
+      const cats = report.kategoriList || [];
+      const hasMatch = selectedCategory.value.some((selected: string) => cats.includes(selected));
       if (!hasMatch) return false;
     }
     return true;
@@ -192,30 +247,28 @@ onMounted(async () => {
   try {
     const { data, error } = await supabase
       .from('events')
-      .select('id, nama_event, start_date, kategori, event_participants(id)')
+      .select('id, nama_event, start_date, event_participants(id), event_kategori_mapping(kategori_event(nama_kategori))')
       .order('start_date', { ascending: false });
       
     if (data) {
-      reports.value = data.map((item: any) => ({
-        ...item,
-        participantsCount: item.event_participants ? item.event_participants.length : 0
-      }));
+      reports.value = data.map((item: any) => {
+        let cats: string[] = [];
+        if (item.event_kategori_mapping && Array.isArray(item.event_kategori_mapping)) {
+          cats = item.event_kategori_mapping
+            .map((mapping: any) => mapping.kategori_event?.nama_kategori)
+            .filter(Boolean);
+        }
+        return {
+          ...item,
+          kategoriList: cats,
+          participantsCount: item.event_participants ? item.event_participants.length : 0
+        };
+      });
 
       let allCats: string[] = [];
-      data.forEach((item: any) => {
-        if (item.kategori) {
-          try {
-            // Parse if it's a stringified JSON array
-            const parsed = typeof item.kategori === 'string' ? JSON.parse(item.kategori) : item.kategori;
-            if (Array.isArray(parsed)) {
-              allCats.push(...parsed);
-            } else if (typeof parsed === 'string') {
-              allCats.push(parsed);
-            }
-          } catch (e) {
-            // If it's a raw string that isn't JSON
-            allCats.push(item.kategori);
-          }
+      reports.value.forEach((item: any) => {
+        if (item.kategoriList && item.kategoriList.length > 0) {
+          allCats.push(...item.kategoriList);
         }
       });
       // Extract unique categories and filter out empty strings

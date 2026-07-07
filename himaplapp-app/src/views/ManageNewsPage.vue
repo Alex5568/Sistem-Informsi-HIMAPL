@@ -9,8 +9,35 @@
           Create News
         </ion-button>
 
+        <!-- Filters Section -->
+        <div class="filters-container">
+          <div class="search-row">
+            <ion-searchbar 
+              placeholder="Search news..." 
+              class="custom-searchbar"
+              v-model="searchQuery"
+              mode="ios">
+            </ion-searchbar>
+            <ion-button fill="clear" color="primary" class="filter-toggle-btn" @click="showFilters = !showFilters">
+              <ion-icon slot="icon-only" :icon="optionsOutline"></ion-icon>
+            </ion-button>
+          </div>
+          
+          <div class="dropdown-filters" v-show="showFilters">
+            <ion-item class="filter-item" lines="none">
+              <ion-select placeholder="Year" interface="popover" v-model="selectedYear">
+                <ion-select-option v-for="year in availableYears" :key="year" :value="year.toString()">{{ year }}</ion-select-option>
+              </ion-select>
+            </ion-item>
+            
+            <ion-button fill="clear" color="medium" class="reset-button" @click="resetFilters" v-if="hasActiveFilters">
+              <ion-icon slot="icon-only" :icon="refreshOutline"></ion-icon>
+            </ion-button>
+          </div>
+        </div>
+
         <ion-accordion-group>
-          <ion-accordion v-for="news in newsList" :key="news.id" :value="news.id">
+          <ion-accordion v-for="news in filteredNews" :key="news.id" :value="news.id">
             <ion-item slot="header" color="light">
               <ion-label>
                 <h2 style="font-weight: 600;">{{ news.title }}</h2>
@@ -100,10 +127,10 @@
 import { 
   IonPage, IonContent, IonButton, 
   IonAccordionGroup, IonAccordion, IonItem, IonLabel, IonIcon, toastController, alertController,
-  IonModal, IonHeader, IonToolbar, IonTitle, IonButtons, IonList, IonInput, IonTextarea, IonSelect, IonSelectOption
+  IonModal, IonHeader, IonToolbar, IonTitle, IonButtons, IonList, IonInput, IonTextarea, IonSelect, IonSelectOption, IonSearchbar
 } from '@ionic/vue';
-import { createOutline, trashOutline } from 'ionicons/icons';
-import { ref, onMounted } from 'vue';
+import { createOutline, trashOutline, optionsOutline, refreshOutline } from 'ionicons/icons';
+import { ref, onMounted, computed } from 'vue';
 import CustomHeader from '../components/CustomHeader.vue';
 import { supabase } from '../supabase';
 
@@ -113,6 +140,47 @@ const isSaving = ref(false);
 const isUploadingImage = ref(false);
 const isEditing = ref(false);
 const editingNewsId = ref<string | null>(null);
+
+// Search & Filter State
+const searchQuery = ref('');
+const showFilters = ref(false);
+const selectedYear = ref('');
+
+const availableYears = computed(() => {
+  const years = new Set<string>();
+  newsList.value.forEach(news => {
+    if (news.created_at) {
+      years.add(new Date(news.created_at).getFullYear().toString());
+    }
+  });
+  return Array.from(years).sort((a, b) => parseInt(b) - parseInt(a));
+});
+
+const hasActiveFilters = computed(() => {
+  return searchQuery.value !== '' || selectedYear.value !== '';
+});
+
+const resetFilters = () => {
+  searchQuery.value = '';
+  selectedYear.value = '';
+};
+
+const filteredNews = computed(() => {
+  return newsList.value.filter(news => {
+    // Search filter
+    if (searchQuery.value && news.title && !news.title.toLowerCase().includes(searchQuery.value.toLowerCase())) {
+      return false;
+    }
+    // Year filter
+    if (selectedYear.value && news.created_at) {
+      const newsYear = new Date(news.created_at).getFullYear().toString();
+      if (newsYear !== selectedYear.value) return false;
+    } else if (selectedYear.value && !news.created_at) {
+      return false;
+    }
+    return true;
+  });
+});
 
 const newNews = ref({
   title: '',
@@ -358,5 +426,50 @@ const deleteNews = async (id: string) => {
   margin-top: 24px;
   --background: #2563eb;
   font-weight: 600;
+}
+
+/* Filters Section */
+.filters-container {
+  margin-bottom: 24px;
+}
+
+.search-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.custom-searchbar {
+  --background: white;
+  --box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06);
+  --border-radius: 12px;
+  padding: 0;
+  flex: 1;
+}
+
+.filter-toggle-btn {
+  margin: 0;
+  height: 36px;
+  --background: white;
+  --border-radius: 12px;
+  box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06);
+}
+
+.dropdown-filters {
+  display: flex;
+  gap: 12px;
+  margin-top: 12px;
+}
+
+.filter-item {
+  --background: white;
+  --border-radius: 8px;
+  flex: 1;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+}
+
+.reset-button {
+  margin: 0;
+  height: 48px;
 }
 </style>

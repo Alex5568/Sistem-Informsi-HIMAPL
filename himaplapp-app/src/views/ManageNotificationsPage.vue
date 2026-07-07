@@ -9,8 +9,35 @@
           Create Notification
         </ion-button>
 
+        <!-- Filters Section -->
+        <div class="filters-container">
+          <div class="search-row">
+            <ion-searchbar 
+              placeholder="Search notifications..." 
+              class="custom-searchbar"
+              v-model="searchQuery"
+              mode="ios">
+            </ion-searchbar>
+            <ion-button fill="clear" color="primary" class="filter-toggle-btn" @click="showFilters = !showFilters">
+              <ion-icon slot="icon-only" :icon="optionsOutline"></ion-icon>
+            </ion-button>
+          </div>
+          
+          <div class="dropdown-filters" v-show="showFilters">
+            <ion-item class="filter-item" lines="none">
+              <ion-select placeholder="Year" interface="popover" v-model="selectedYear">
+                <ion-select-option v-for="year in availableYears" :key="year" :value="year.toString()">{{ year }}</ion-select-option>
+              </ion-select>
+            </ion-item>
+            
+            <ion-button fill="clear" color="medium" class="reset-button" @click="resetFilters" v-if="hasActiveFilters">
+              <ion-icon slot="icon-only" :icon="refreshOutline"></ion-icon>
+            </ion-button>
+          </div>
+        </div>
+
         <ion-accordion-group>
-          <ion-accordion v-for="notif in notifList" :key="notif.id" :value="notif.id">
+          <ion-accordion v-for="notif in filteredNotifList" :key="notif.id" :value="notif.id">
             <ion-item slot="header" color="light">
               <ion-label>
                 <h2 style="font-weight: 600;">{{ notif.judul }}</h2>
@@ -123,7 +150,7 @@ import {
   IonAccordionGroup, IonAccordion, IonItem, IonLabel, IonIcon, toastController, alertController,
   IonModal, IonHeader, IonToolbar, IonTitle, IonButtons, IonList, IonInput, IonTextarea, IonSelect, IonSelectOption, IonSearchbar, IonCheckbox
 } from '@ionic/vue';
-import { createOutline, trashOutline } from 'ionicons/icons';
+import { createOutline, trashOutline, optionsOutline, refreshOutline } from 'ionicons/icons';
 import { ref, onMounted, computed } from 'vue';
 import CustomHeader from '../components/CustomHeader.vue';
 import { supabase } from '../supabase';
@@ -134,6 +161,47 @@ const isCreateModalOpen = ref(false);
 const isSaving = ref(false);
 const isEditing = ref(false);
 const editingNotifId = ref<number | null>(null);
+
+// Search & Filter State
+const searchQuery = ref('');
+const showFilters = ref(false);
+const selectedYear = ref('');
+
+const availableYears = computed(() => {
+  const years = new Set<string>();
+  notifList.value.forEach(notif => {
+    if (notif.created_at) {
+      years.add(new Date(notif.created_at).getFullYear().toString());
+    }
+  });
+  return Array.from(years).sort((a, b) => parseInt(b) - parseInt(a));
+});
+
+const hasActiveFilters = computed(() => {
+  return searchQuery.value !== '' || selectedYear.value !== '';
+});
+
+const resetFilters = () => {
+  searchQuery.value = '';
+  selectedYear.value = '';
+};
+
+const filteredNotifList = computed(() => {
+  return notifList.value.filter(notif => {
+    // Search filter
+    if (searchQuery.value && notif.judul && !notif.judul.toLowerCase().includes(searchQuery.value.toLowerCase())) {
+      return false;
+    }
+    // Year filter
+    if (selectedYear.value && notif.created_at) {
+      const notifYear = new Date(notif.created_at).getFullYear().toString();
+      if (notifYear !== selectedYear.value) return false;
+    } else if (selectedYear.value && !notif.created_at) {
+      return false;
+    }
+    return true;
+  });
+});
 
 const newNotif = ref({
   judul: '',
@@ -370,5 +438,50 @@ const deleteNotif = async (id: number) => {
   margin-top: 24px;
   --background: #2563eb;
   font-weight: 600;
+}
+
+/* Filters Section */
+.filters-container {
+  margin-bottom: 24px;
+}
+
+.search-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.custom-searchbar {
+  --background: white;
+  --box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06);
+  --border-radius: 12px;
+  padding: 0;
+  flex: 1;
+}
+
+.filter-toggle-btn {
+  margin: 0;
+  height: 36px;
+  --background: white;
+  --border-radius: 12px;
+  box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06);
+}
+
+.dropdown-filters {
+  display: flex;
+  gap: 12px;
+  margin-top: 12px;
+}
+
+.filter-item {
+  --background: white;
+  --border-radius: 8px;
+  flex: 1;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+}
+
+.reset-button {
+  margin: 0;
+  height: 48px;
 }
 </style>

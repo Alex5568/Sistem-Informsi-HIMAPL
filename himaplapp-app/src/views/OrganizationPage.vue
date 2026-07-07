@@ -150,11 +150,8 @@ const fetchData = async () => {
       dosens.value = allUsers.filter(u => u.role === 'Dosen');
 
       // Filter Ketua / Wakil Ketua
-      const allKetuas = allUsers.filter(u => u.role === 'Ketua');
-      if (allKetuas.length > 0) {
-        ketuaUtama.value = allKetuas[0];
-        wakilKetuas.value = allKetuas.slice(1);
-      }
+      ketuaUtama.value = allUsers.find(u => u.role === 'Ketua') || null;
+      wakilKetuas.value = allUsers.filter(u => u.role === 'Wakil Ketua');
 
       // Filter Divisi
       divisions.value = allDivs.map(div => {
