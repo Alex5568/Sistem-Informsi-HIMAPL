@@ -38,7 +38,7 @@
               <ion-label>Settings</ion-label>
               <ion-icon :icon="chevronForwardOutline" slot="end" class="chevron-icon"></ion-icon>
             </ion-item>
-            <ion-item button class="profile-item" :detail="false">
+            <ion-item button class="profile-item" :detail="false" @click="openHelpForm">
               <div class="item-icon-box bg-gray" slot="start">
                 <ion-icon :icon="helpCircleOutline" class="color-gray"></ion-icon>
               </div>
@@ -164,6 +164,10 @@ const showToast = async (message: string, color: string = 'success') => {
     position: 'top'
   });
   await toast.present();
+};
+
+const openHelpForm = () => {
+  window.open('https://docs.google.com/forms/d/e/1FAIpQLSeAoB7Gnw0kw_Pg4SiYO7CS_y_3wEpCSPADwv97zTMXgtMX0A/viewform?usp=publish-editor', '_blank');
 };
 
 const saveProfile = async () => {

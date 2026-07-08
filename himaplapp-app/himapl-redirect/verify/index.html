@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Verifikasi Akun - HIMAPL</title>
+    <!-- Google Fonts: Inter -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    
+    <style>
+        :root {
+            --primary: #184a85;
+            --primary-hover: #123766;
+            --bg-color: #F8FAFC;
+            --surface: #FFFFFF;
+            --text-main: #0F172A;
+            --text-muted: #64748B;
+            --success: #10B981;
+        }
+
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: 'Inter', sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            text-align: center;
+        }
+
+        .container {
+            background-color: var(--surface);
+            padding: 40px;
+            border-radius: 24px;
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.05), 0 8px 10px -6px rgba(0, 0, 0, 0.01);
+            max-width: 400px;
+            width: 90%;
+            border: 1px solid #E2E8F0;
+            animation: fadeIn 0.5s ease-out;
+        }
+
+        .icon-container {
+            width: 80px;
+            height: 80px;
+            background: rgba(16, 185, 129, 0.1);
+            border-radius: 50%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            margin: 0 auto 24px auto;
+            color: var(--success);
+        }
+
+        .icon-container svg {
+            width: 40px;
+            height: 40px;
+        }
+
+        h1 {
+            margin: 0 0 12px 0;
+            font-size: 24px;
+            font-weight: 700;
+            letter-spacing: -0.02em;
+        }
+
+        p {
+            margin: 0 0 32px 0;
+            color: var(--text-muted);
+            line-height: 1.6;
+            font-size: 15px;
+        }
+
+        .btn {
+            display: inline-block;
+            background-color: var(--primary);
+            color: white;
+            text-decoration: none;
+            padding: 14px 28px;
+            border-radius: 12px;
+            font-weight: 600;
+            font-size: 15px;
+            transition: all 0.2s ease;
+            border: none;
+            cursor: pointer;
+            width: 100%;
+            box-sizing: border-box;
+        }
+
+        .btn:hover {
+            background-color: var(--primary-hover);
+            transform: translateY(-2px);
+            box-shadow: 0 10px 15px -3px rgba(79, 70, 229, 0.3);
+        }
+
+        .spinner {
+            border: 3px solid rgba(255,255,255,0.1);
+            border-radius: 50%;
+            border-top: 3px solid var(--primary);
+            width: 24px;
+            height: 24px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 16px auto;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        #loading-state {
+            display: block;
+        }
+
+        #success-state {
+            display: none;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <!-- State Loading -->
+        <div id="loading-state">
+            <div class="spinner"></div>
+            <h1>Memproses Verifikasi...</h1>
+            <p>Tunggu sebentar, kami sedang mengarahkan Anda kembali ke aplikasi.</p>
+        </div>
+
+        <!-- State Success (Fallback jika di Laptop) -->
+        <div id="success-state">
+            <div class="icon-container">
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" />
+                </svg>
+            </div>
+            <h1>Verifikasi Sukses!</h1>
+            <p id="message-text">Email Anda telah berhasil diverifikasi. Jika aplikasi tidak terbuka otomatis, silakan buka aplikasi di HP Anda.</p>
+            <button class="btn" onclick="openApp()">Buka Aplikasi HIMAPL</button>
+        </div>
+    </div>
+
+    <script>
+        // Skema custom aplikasi Android Anda yang ada di AndroidManifest.xml
+        // (contoh: himaplapp://login)
+        const APP_SCHEME = 'himaplapp://'; 
+        
+        function openApp() {
+            // Mengambil parameter hash (seperti token dari supabase) jika ada
+            const hash = window.location.hash;
+            
+            // Mencoba mengarahkan ke custom scheme aplikasi Anda
+            // Sehingga aplikasi menangkap tokennya
+            window.location.href = APP_SCHEME + 'verify' + hash;
+        }
+
+        window.onload = function() {
+            const hash = window.location.hash;
+            
+            // Jika pengunjung tidak sengaja buka website langsung (tanpa token dari email)
+            if (!hash) {
+                document.getElementById('loading-state').style.display = 'none';
+                document.getElementById('success-state').style.display = 'block';
+                document.querySelector('#success-state h1').innerText = 'Sistem HIMAPL';
+                document.getElementById('message-text').innerText = 'Halaman ini merupakan jalur aman (redirect) internal untuk aplikasi mobile HIMAPL.';
+                document.querySelector('.icon-container').style.display = 'none'; // Sembunyikan ikon centang
+                
+                // Ubah tombol agar hanya membuka aplikasi utama (tanpa route verify)
+                document.querySelector('#success-state .btn').setAttribute('onclick', "window.location.href='" + APP_SCHEME + "'");
+                document.querySelector('#success-state .btn').innerText = "Buka Aplikasi HIMAPL";
+                return; // Hentikan proses eksekusi redirect otomatis
+            }
+
+            // Tunggu sebentar untuk memberi waktu auto-redirect
+            setTimeout(() => {
+                openApp();
+
+                // Jika setelah 1.5 detik belum pindah halaman (artinya pengguna buka di Laptop)
+                setTimeout(() => {
+                    document.getElementById('loading-state').style.display = 'none';
+                    document.getElementById('success-state').style.display = 'block';
+                }, 1500);
+
+            }, 500);
+        };
+    </script>
+</body>
+</html>

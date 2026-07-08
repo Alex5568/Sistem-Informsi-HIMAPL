@@ -246,7 +246,7 @@ onMounted(() => {
     // Jika URL yang masuk mengenali skema aplikasi kita
     if (event.url.startsWith('himaplapp://')) {
       // Ekstrak access_token dan refresh_token dari URL hash
-      // Format url dari Supabase: himaplapp://tabs/home#access_token=...&refresh_token=...
+      // Format url dari Supabase: himaplapp://verify#access_token=...&refresh_token=...
       const urlString = event.url.replace('himaplapp://', 'http://localhost/');
       const url = new URL(urlString);
       const hashParams = new URLSearchParams(url.hash.substring(1));
@@ -255,7 +255,6 @@ onMounted(() => {
       const refreshToken = hashParams.get('refresh_token');
 
       // Jika ada token, set sesi secara manual ke Supabase
-      // Ini sangat penting karena Vue Router push tidak memicu event hashchange yang ditunggu oleh Supabase
       if (accessToken && refreshToken) {
         const { error } = await supabase.auth.setSession({
           access_token: accessToken,
@@ -267,8 +266,13 @@ onMounted(() => {
         }
       }
 
-      // Ubah himaplapp:// menjadi struktur URL path normal yang dimengerti router (tanpa hash panjang agar URL bersih)
-      const pathOnly = url.pathname;
+      // Ambil path dari URL (misal: /verify)
+      let pathOnly = url.pathname;
+      
+      // Jika path adalah /verify (berasal dari web redirect), arahkan ke halaman utama (/tabs/home)
+      if (pathOnly === '/verify' || pathOnly === '/') {
+        pathOnly = '/tabs/home';
+      }
       
       // Lanjutkan navigasi router Vue
       router.push(pathOnly);

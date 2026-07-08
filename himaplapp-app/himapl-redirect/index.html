@@ -92,15 +92,26 @@
             
             // Mengambil semua data rahasia (seperti token dll) yang ada di akhir URL (#...)
             const hash = window.location.hash;
+            const appScheme = "himaplapp://";
             
-            // Custom scheme aplikasi Android Anda
-            const appScheme = "himaplapp://update-password";
-            
-            // Gabungkan scheme dengan hash dari URL
-            const finalUrl = appScheme + hash;
-            
-            // Tempelkan URL tersebut ke tombol
-            btn.href = finalUrl;
+            // Jika tidak ada hash (orang iseng buka website langsung)
+            if (!hash) {
+                document.querySelector('h1').innerText = 'Sistem HIMAPL';
+                document.querySelector('p').innerText = 'Halaman ini merupakan jalur aman (redirect) internal untuk aplikasi mobile HIMAPL.';
+                document.querySelector('.icon').style.display = 'none';
+                btn.href = appScheme;
+                btn.innerText = "Buka Aplikasi HIMAPL";
+            } else {
+                // Gabungkan scheme dengan hash dari URL
+                const finalUrl = appScheme + "update-password" + hash;
+                // Tempelkan URL tersebut ke tombol
+                btn.href = finalUrl;
+                
+                // (Opsional) Langsung mencoba mengalihkan pengguna secara otomatis
+                setTimeout(() => {
+                    window.location.replace(finalUrl);
+                }, 1000);
+            }
 
             // Tambahkan animasi sedikit saat tombol diklik agar terlihat interaktif
             btn.addEventListener("click", () => {
@@ -114,12 +125,6 @@
                     btn.innerText = "Coba Buka Lagi";
                 }, 3000);
             });
-            
-            // (Opsional) Langsung mencoba mengalihkan pengguna secara otomatis
-            // Beberapa browser memblokir ini, tapi tidak ada salahnya dicoba
-            setTimeout(() => {
-                window.location.replace(finalUrl);
-            }, 1000);
         });
     </script>
 </body>

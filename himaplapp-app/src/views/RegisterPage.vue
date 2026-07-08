@@ -145,6 +145,9 @@ const handleRegister = async () => {
       email: email.value,
       password: password.value,
       options: {
+        emailRedirectTo: window.location.origin.includes('localhost') 
+          ? window.location.origin + '/' 
+          : 'https://himapl-redirect.vercel.app/verify',
         data: {
           full_name: fullName.value,
           nim: nim.value // Mengirim NIM ke metadata
