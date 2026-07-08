@@ -18,7 +18,7 @@
         <!-- Hero Section -->
         <div class="hero-section">
           <!-- Placeholder image or event specific image if you have one in the future -->
-          <img src="https://ionicframework.com/docs/img/demos/card-media.png" alt="Event Hero Image" class="hero-image"/>
+          <img :src="docs.length > 0 ? docs[docs.length - 1].url_foto : 'https://ionicframework.com/docs/img/demos/card-media.png'" alt="Event Hero Image" class="hero-image"/>
           <div class="hero-overlay">
             <ion-badge class="status-badge" :class="getBadgeClass(computedStatus)">{{ computedStatus }}</ion-badge>
             <h1 class="event-title">{{ event.nama_event }}</h1>
@@ -161,6 +161,10 @@
                 <ion-icon :icon="downloadOutline" slot="start"></ion-icon>
                 Download
               </ion-button>
+              <ion-button expand="block" fill="clear" color="danger" v-if="['Ketua', 'Wakil Ketua', 'Dosen'].includes(currentUserRole)" @click="deleteDoc(doc.id, doc.url_foto)">
+                <ion-icon :icon="trashOutline" slot="start"></ion-icon>
+                Delete
+              </ion-button>
             </div>
           </div>
         </ion-content>
@@ -204,7 +208,7 @@ import {
   IonCard, IonCardContent, IonList, IonItem, IonCheckbox, IonLabel,
   actionSheetController, alertController, IonModal
 } from '@ionic/vue';
-import { calendarOutline, locationOutline, peopleOutline, cameraOutline, imageOutline, linkOutline, closeOutline, downloadOutline } from 'ionicons/icons';
+import { calendarOutline, locationOutline, peopleOutline, cameraOutline, imageOutline, linkOutline, closeOutline, downloadOutline, trashOutline } from 'ionicons/icons';
 import { ref, onMounted, computed } from 'vue';
 import { useRoute } from 'vue-router';
 import { supabase } from '../supabase';
@@ -224,6 +228,7 @@ const isProcessing = ref(false);
 const isRegistered = ref(false);
 const participantsCount = ref(0);
 const currentUserId = ref<string | null>(null);
+const currentUserRole = ref<string>('Anggota');
 
 const openLink = (url: string) => {
   window.open(url, '_blank');
@@ -233,7 +238,13 @@ const fetchEventData = async () => {
   isLoading.value = true;
   try {
     const { data: { user } } = await supabase.auth.getUser();
-    if (user) currentUserId.value = user.id;
+    if (user) {
+      currentUserId.value = user.id;
+      const { data: userData } = await supabase.from('users').select('role').eq('id', user.id).single();
+      if (userData) {
+        currentUserRole.value = userData.role || 'Anggota';
+      }
+    }
 
     // Fetch Event Details
     const { data: eventData, error: eventError } = await supabase
@@ -520,6 +531,71 @@ const downloadImage = async (url: string, id: number) => {
     console.error("Failed to download", err);
     showToast("Failed to download image. CORS might be blocking it.", "danger");
   }
+};
+
+const deleteDoc = async (id: number, url: string) => {
+  const alert = await alertController.create({
+    header: 'Hapus Dokumentasi',
+    message: 'Apakah Anda yakin ingin menghapus dokumentasi ini?',
+    buttons: [
+      {
+        text: 'Batal',
+        role: 'cancel'
+      },
+      {
+        text: 'Hapus',
+        role: 'destructive',
+        handler: async () => {
+          try {
+            // Delete record from database
+            const { error: dbError } = await supabase
+              .from('dokumentasi')
+              .delete()
+              .eq('id', id);
+            
+            if (dbError) throw dbError;
+
+            // Optionally, delete from storage bucket if it's stored in our bucket
+            if (url.includes('dokumentasi-event')) {
+              try {
+                // Extract the path after the bucket name
+                const urlObj = new URL(url);
+                const pathParts = urlObj.pathname.split('dokumentasi-event/');
+                if (pathParts.length > 1) {
+                  const filePath = pathParts[1];
+                  // Delete file from storage array
+                  await supabase.storage.from('dokumentasi-event').remove([filePath]);
+                }
+              } catch (storageError) {
+                console.error('Failed to delete file from storage', storageError);
+                // We don't throw because the db record deletion is the main concern
+              }
+            } else if (url.includes('DOKUMENTASI-EVENT')) {
+              try {
+                const urlObj = new URL(url);
+                const pathParts = urlObj.pathname.split('DOKUMENTASI-EVENT/');
+                if (pathParts.length > 1) {
+                  const filePath = pathParts[1];
+                  await supabase.storage.from('DOKUMENTASI-EVENT').remove([filePath]);
+                }
+              } catch (storageError) {
+                console.error('Failed to delete file from storage', storageError);
+              }
+            }
+
+            // Remove from local list
+            docs.value = docs.value.filter(d => d.id !== id);
+            showToast('Dokumentasi berhasil dihapus', 'success');
+
+          } catch (err: any) {
+            console.error('Deletion error:', err);
+            showToast(err.message || 'Gagal menghapus dokumentasi', 'danger');
+          }
+        }
+      }
+    ]
+  });
+  await alert.present();
 };
 
 const toggleTaskStatus = async (task: any) => {

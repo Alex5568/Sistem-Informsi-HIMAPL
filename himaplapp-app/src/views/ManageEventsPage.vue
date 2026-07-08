@@ -295,6 +295,7 @@ const isUploadingImage = ref(false);
 const selectedSegment = ref('event');
 const isEditing = ref(false);
 const editingEventId = ref<number | null>(null);
+const originalImageUrl = ref('');
 
 // Search & Filter State
 const searchQuery = ref('');
@@ -502,6 +503,7 @@ onMounted(() => {
 const createEvent = () => {
   isEditing.value = false;
   editingEventId.value = null;
+  originalImageUrl.value = '';
   
   const now = new Date();
   // Adjust to local timezone ISO string for the picker
@@ -669,7 +671,7 @@ const saveEvent = async () => {
         }
       }
 
-      if (newEvent.value.image_url) {
+      if (newEvent.value.image_url && newEvent.value.image_url !== originalImageUrl.value) {
         await supabase.from('dokumentasi').insert([{
           event_id: editingEventId.value,
           uploader_id: user.id,
@@ -817,6 +819,7 @@ const editEvent = async (event: any) => {
       status: eventData.status || 'DRAFT',
       image_url: docData && docData.length > 0 ? docData[0].url_foto : ''
     };
+    originalImageUrl.value = newEvent.value.image_url;
     
     eventLinks.value = linksData || [];
 

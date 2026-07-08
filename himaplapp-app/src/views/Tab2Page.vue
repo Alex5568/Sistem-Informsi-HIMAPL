@@ -40,7 +40,7 @@
                   >
                     <div class="news-card-content">
                       <ion-thumbnail class="news-thumbnail">
-                        <img src="https://ionicframework.com/docs/img/demos/thumbnail.svg" alt="Thumbnail" />
+                        <img :src="event.dokumentasi && event.dokumentasi.length > 0 ? event.dokumentasi[0].url_foto : 'https://ionicframework.com/docs/img/demos/thumbnail.svg'" alt="Thumbnail" />
                       </ion-thumbnail>
                       <div class="news-info">
                         <div class="news-meta">
@@ -83,7 +83,7 @@
             >
               <div class="news-card-content">
                 <ion-thumbnail class="news-thumbnail">
-                  <img src="https://ionicframework.com/docs/img/demos/thumbnail.svg" alt="Thumbnail" />
+                  <img :src="event.dokumentasi && event.dokumentasi.length > 0 ? event.dokumentasi[0].url_foto : 'https://ionicframework.com/docs/img/demos/thumbnail.svg'" alt="Thumbnail" />
                 </ion-thumbnail>
                 <div class="news-info">
                   <div class="news-meta">
@@ -146,7 +146,7 @@ const fetchEvents = async () => {
     // 2. Ambil data events yang bukan draft/cancelled
     const { data: eventsData, error: eventsError } = await supabase
       .from('events')
-      .select('*, event_kategori_mapping(kategori_event(nama_kategori))')
+      .select('*, event_kategori_mapping(kategori_event(nama_kategori)), dokumentasi(url_foto)')
       .in('status', ['PUBLISHED', 'AVAILABLE', 'UPCOMING', 'COMPLETED']) // Mengecualikan DRAFT, CANCELLED, CLOSED
       .order('start_date', { ascending: true });
     
