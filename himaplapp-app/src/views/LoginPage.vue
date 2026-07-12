@@ -192,7 +192,10 @@ const handleGoogleLogin = async () => {
     options: {
       redirectTo: isNative 
         ? 'himaplapp://tabs/home' 
-        : window.location.origin + '/tabs/home'
+        : window.location.origin + '/tabs/home',
+      queryParams: {
+        prompt: 'select_account'
+      }
     }
   });
   

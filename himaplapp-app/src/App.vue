@@ -83,6 +83,8 @@ import { ref, computed, onMounted } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
 import { supabase } from './supabase';
 import { App as CapacitorApp } from '@capacitor/app';
+import { Capacitor } from '@capacitor/core';
+import { Camera } from '@capacitor/camera';
 import {
   homeOutline, homeSharp,
   calendarOutline, calendarSharp,
@@ -234,6 +236,12 @@ const fetchUserProfile = async (user: any) => {
 };
 
 onMounted(() => {
+  if (Capacitor.isNativePlatform()) {
+    // Proactively request camera & photo gallery permissions on native devices
+    Camera.requestPermissions({ permissions: ['camera', 'photos'] })
+      .catch(err => console.warn('Permission request error:', err));
+  }
+
   supabase.auth.getSession().then(({ data: { session } }) => {
     fetchUserProfile(session?.user);
   });

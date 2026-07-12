@@ -92,7 +92,10 @@
                   <ion-input type="text" placeholder="Paste image URL here" v-model="newEvent.image_url" style="margin-bottom: 8px; --background: #f8fafc; border-radius: 8px;"></ion-input>
                   <div style="display: flex; gap: 8px; align-items: center;">
                     <span style="font-size: 12px; color: #64748b;">OR</span>
-                    <input type="file" accept="image/*" @change="handleImageUpload" style="font-size: 12px; max-width: 200px;" />
+                    <ion-button size="small" fill="outline" @click="pickImageFromGallery">
+                      <ion-icon slot="start" :icon="imageOutline"></ion-icon>
+                      Select from Gallery
+                    </ion-button>
                   </div>
                   <div v-if="isUploadingImage" style="font-size: 12px; color: #2563eb; margin-top: 4px;">Uploading...</div>
                   <div v-if="newEvent.image_url" style="margin-top: 8px;">
@@ -283,10 +286,11 @@ import {
   IonModal, IonHeader, IonToolbar, IonTitle, IonButtons, IonList, IonInput, IonTextarea, IonSelect, IonSelectOption,
   IonSegment, IonSegmentButton, IonDatetime, IonDatetimeButton, IonPopover, IonSearchbar, IonCheckbox
 } from '@ionic/vue';
-import { createOutline, trashOutline, addOutline, optionsOutline, refreshOutline } from 'ionicons/icons';
+import { createOutline, trashOutline, addOutline, optionsOutline, refreshOutline, imageOutline } from 'ionicons/icons';
 import { ref, onMounted, computed } from 'vue';
 import CustomHeader from '../components/CustomHeader.vue';
 import { supabase } from '../supabase';
+import { Camera, CameraResultType, CameraSource } from '@capacitor/camera';
 
 const events = ref<any[]>([]);
 const isCreateModalOpen = ref(false);
@@ -528,32 +532,57 @@ const createEvent = () => {
   isCreateModalOpen.value = true;
 };
 
-const handleImageUpload = async (event: Event) => {
-  const target = event.target as HTMLInputElement;
-  const file = target.files?.[0];
-  if (!file) return;
+const base64ToBlob = (base64: string, mimeType: string) => {
+  const byteCharacters = atob(base64);
+  const byteArrays = [];
+  for (let offset = 0; offset < byteCharacters.length; offset += 512) {
+    const slice = byteCharacters.slice(offset, offset + 512);
+    const byteNumbers = new Array(slice.length);
+    for (let i = 0; i < slice.length; i++) {
+      byteNumbers[i] = slice.charCodeAt(i);
+    }
+    const byteArray = new Uint8Array(byteNumbers);
+    byteArrays.push(byteArray);
+  }
+  return new Blob(byteArrays, { type: mimeType });
+};
 
-  isUploadingImage.value = true;
+const pickImageFromGallery = async () => {
   try {
-    const fileExt = file.name.split('.').pop();
-    const fileName = `${Math.random()}.${fileExt}`;
+    const image = await Camera.getPhoto({
+      quality: 80,
+      allowEditing: false,
+      resultType: CameraResultType.Base64,
+      source: CameraSource.Photos
+    });
+
+    isUploadingImage.value = true;
+    
+    // Convert base64 to File object using robust helper
+    if (!image.base64String) throw new Error('No base64 string returned');
+    const blob = base64ToBlob(image.base64String, `image/${image.format}`);
+    const fileName = `${Math.random()}.${image.format}`;
+    const file = new File([blob], fileName, { type: `image/${image.format}` });
+
     const filePath = `events/${fileName}`;
 
     const { error: uploadError } = await supabase.storage
-      .from('DOKUMENTASI-EVENT') 
+      .from('dokumentasi-event') 
       .upload(filePath, file);
 
     if (uploadError) throw uploadError;
 
     const { data: { publicUrl } } = supabase.storage
-      .from('DOKUMENTASI-EVENT')
+      .from('dokumentasi-event')
       .getPublicUrl(filePath);
 
     newEvent.value.image_url = publicUrl;
     showToast('Image uploaded', 'success');
   } catch (error: any) {
-    console.error('Upload error:', error);
-    showToast('Failed to upload image', 'danger');
+    if (error.message !== 'User cancelled photos app') {
+      console.error('Upload error:', error);
+      showToast(`Upload failed: ${error.message || 'Unknown error'}`, 'danger');
+    }
   } finally {
     isUploadingImage.value = false;
   }

@@ -212,6 +212,8 @@ import { calendarOutline, locationOutline, peopleOutline, cameraOutline, imageOu
 import { ref, onMounted, computed } from 'vue';
 import { useRoute } from 'vue-router';
 import { supabase } from '../supabase';
+import { Capacitor } from '@capacitor/core';
+import { Filesystem, Directory } from '@capacitor/filesystem';
 
 const route = useRoute();
 const eventId = Number(Array.isArray(route.params.id) ? route.params.id[0] : route.params.id);
@@ -517,19 +519,59 @@ const handleFileUpload = async (event: Event) => {
 
 const downloadImage = async (url: string, id: number) => {
   try {
+    const fileName = `dokumentasi_${eventId}_${id}.jpg`;
+    
+    // Fetch image as blob
     const response = await fetch(url);
     const blob = await response.blob();
-    const objectUrl = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = objectUrl;
-    link.download = `dokumentasi_${eventId}_${id}.jpg`;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    URL.revokeObjectURL(objectUrl);
+
+    if (Capacitor.isNativePlatform()) {
+      // Convert blob to base64 for Capacitor
+      const reader = new FileReader();
+      reader.readAsDataURL(blob);
+      reader.onloadend = async () => {
+        const base64data = reader.result as string;
+        
+        try {
+          const platform = Capacitor.getPlatform();
+          let targetDirectory = Directory.Documents;
+          let targetPath = fileName;
+          let folderName = "Documents";
+
+          if (platform === 'android') {
+            targetDirectory = Directory.ExternalStorage;
+            targetPath = `Download/${fileName}`;
+            folderName = "Download";
+          }
+
+          // Write to filesystem
+          await Filesystem.writeFile({
+            path: targetPath,
+            data: base64data,
+            directory: targetDirectory
+          });
+          
+          showToast(`Image successfully downloaded to ${folderName} folder!`, "success");
+        } catch (fileErr: any) {
+          console.error("Filesystem write error:", fileErr);
+          showToast("Failed to save image to device.", "danger");
+        }
+      };
+    } else {
+      // Web fallback
+      const objectUrl = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = objectUrl;
+      link.download = fileName;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(objectUrl);
+      showToast("Image successfully downloaded!", "success");
+    }
   } catch (err) {
     console.error("Failed to download", err);
-    showToast("Failed to download image. CORS might be blocking it.", "danger");
+    showToast("Failed to download image. Please check your internet connection.", "danger");
   }
 };
 
