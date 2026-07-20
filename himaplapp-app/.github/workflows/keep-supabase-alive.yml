@@ -1,0 +1,25 @@
+name: Keep Supabase Alive
+
+on:
+  schedule:
+    # Berjalan setiap hari Senin dan Kamis jam 00:00 UTC
+    - cron: '0 0 * * 1,4'
+  workflow_dispatch: # Memungkinkan eksekusi manual via dashboard GitHub
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ping Supabase API
+        env:
+          # Anda perlu menambahkan SUPABASE_URL dan SUPABASE_ANON_KEY 
+          # ke dalam GitHub Secrets di repositori Anda.
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+          
+          # Ganti 'users' dengan nama tabel apapun yang ada di database Anda
+          TABLE_NAME: 'users'
+        run: |
+          curl -s -X GET "${SUPABASE_URL}/rest/v1/${TABLE_NAME}?select=*&limit=1" \
+          -H "apikey: ${SUPABASE_ANON_KEY}" \
+          -H "Authorization: Bearer ${SUPABASE_ANON_KEY}"
