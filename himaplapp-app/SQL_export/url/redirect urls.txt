@@ -1,0 +1,15 @@
+himaplapp://*
+
+himaplapp://tabs/home
+
+himaplapp://update-password
+
+https://himapl-redirect.vercel.app/*
+
+http://localhost:8100/tabs/home
+
+http://localhost:5173/*
+
+himaplapp://login
+
+https://himapl-redirect.vercel.app/verify
